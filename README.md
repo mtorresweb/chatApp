@@ -1,5 +1,5 @@
 # chatApp
-Chat application made wit Express, PostgreSQL, React and Socket.io.
+Chat application made wit Express, MongoDB, React and Socket.io.
 ## Overview
   
 In this project, I have developed a dynamic real-time chat application that leverages a comprehensive technology stack. The application is designed using React, Material UI, and styled components on the frontend, while the backend is powered by Express, MongoDB, and Socket.io. In addition, various libraries such as express-validator, helmet, express-rate-limit, and jsonwebtoken are employed to enhance security and functionality.
