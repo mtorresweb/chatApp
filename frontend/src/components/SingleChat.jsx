@@ -42,7 +42,9 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
     setLoading(true);
     try {
       const { data } = await axios.get(
-        `http://localhost:3001/api/message/getMessages/${selectedChat._id}`,
+        `${import.meta.env.VITE_API_URL}/api/message/getMessages/${
+          selectedChat._id
+        }`,
         { headers: { Authorization: "Bearer " + user.token } }
       );
 
@@ -64,7 +66,7 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
         setTyping(false);
 
         const { data } = await axios.post(
-          "http://localhost:3001/api/message/send",
+          `${import.meta.env.VITE_API_URL}/api/message/send`,
           { content: newMessage, chatId: selectedChat._id },
           { headers: { Authorization: "Bearer " + user.token } }
         );

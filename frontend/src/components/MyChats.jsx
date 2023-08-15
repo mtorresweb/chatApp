@@ -30,7 +30,7 @@ const MyChats = ({ fetchAgain }) => {
     setLoading(true);
     try {
       const { data } = await axios.get(
-        "http://localhost:3001/api/chat/getChats",
+        `${import.meta.env.VITE_API_URL}/api/chat/getChats`,
         { headers: { Authorization: "Bearer " + user.token } }
       );
 

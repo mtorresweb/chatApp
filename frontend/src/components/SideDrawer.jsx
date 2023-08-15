@@ -12,7 +12,7 @@ import {
   Snackbar,
   TextField,
 } from "@mui/material";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { PersonSearchOutlined } from "@mui/icons-material";
 import NotificationsIcon from "@mui/icons-material/Notifications";
 import { ChatState } from "../Context/ChatProvider";
@@ -25,7 +25,6 @@ import { getSender } from "../chat methods";
 import { socket } from "../socket";
 
 export const SideDrawer = () => {
-  const navigate = useNavigate();
   const {
     user,
     setUser,
@@ -36,6 +35,8 @@ export const SideDrawer = () => {
     setNotifications,
   } = ChatState();
 
+  const navigate = useNavigate();
+
   //search user
   const [search, setSearch] = useState("");
   const [searchResults, setSearchResults] = useState([]);
@@ -45,6 +46,7 @@ export const SideDrawer = () => {
     value: false,
     message: "",
   });
+
   const handleSearch = async () => {
     if (!search) {
       setError({ value: true, message: "Search input is empty" });
@@ -54,7 +56,7 @@ export const SideDrawer = () => {
     try {
       setLoading(true);
       const { data } = await axios.get(
-        `http://localhost:3001/api/user/listUsers?search=${search}`,
+        `${import.meta.env.VITE_API_URL}/api/user/listUsers?search=${search}`,
         {
           headers: {
             Authorization: "Bearer " + user.token,
@@ -80,7 +82,7 @@ export const SideDrawer = () => {
       setLoadingChat(true);
 
       const { data } = await axios.post(
-        "http://localhost:3001/api/chat/access",
+        `${import.meta.env.VITE_API_URL}/api/chat/access`,
         { userId },
         {
           headers: { Authorization: "Bearer " + user.token },
@@ -104,7 +106,11 @@ export const SideDrawer = () => {
 
   //menu profile
   const [anchorEl, setAnchorEl] = useState(null);
-  const open = Boolean(anchorEl);
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    setOpen(Boolean(anchorEl));
+  }, [anchorEl]);
+
   const handleClick = (event) => {
     setAnchorEl(event.currentTarget);
   };
@@ -125,14 +131,9 @@ export const SideDrawer = () => {
   //drawer
   const [state, setState] = useState(false);
 
-  const toggleDrawer = (open) => (event) => {
-    if (
-      event.type === "keydown" &&
-      (event.key === "Tab" || event.key === "Shift")
-    ) {
-      return;
-    }
-
+  const toggleDrawer = (open) => {
+    setSearch("");
+    setSearchResults([]);
     setState(open);
   };
 
@@ -157,7 +158,7 @@ export const SideDrawer = () => {
       >
         <Button
           variant="contained"
-          onClick={toggleDrawer(true)}
+          onClick={() => toggleDrawer(true)}
           startIcon={<PersonSearchOutlined />}
         >
           Search user
@@ -166,7 +167,7 @@ export const SideDrawer = () => {
           variant="temporary"
           anchor={"left"}
           open={state}
-          onClose={toggleDrawer(false)}
+          onClose={() => toggleDrawer(false)}
         >
           <Box
             sx={{
@@ -183,7 +184,7 @@ export const SideDrawer = () => {
             <Box
               style={{ flex: 1, display: "flex", justifyContent: "flex-end" }}
             >
-              <Button onClick={toggleDrawer(false)}>
+              <Button onClick={() => toggleDrawer(false)}>
                 <LogoutIcon />
               </Button>
             </Box>

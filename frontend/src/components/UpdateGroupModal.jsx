@@ -78,7 +78,7 @@ const UpdateGroupModal = ({ fetchAgain, setFetchAgain, fetchMessages }) => {
 
     try {
       const { data } = await axios.put(
-        "http://localhost:3001/api/chat/removeUser",
+        `${import.meta.env.VITE_API_URL}/api/chat/removeUser`,
         { chatId: selectedChat._id, userId: userToRemove._id },
         { headers: { Authorization: "Bearer " + user.token } }
       );
@@ -101,7 +101,7 @@ const UpdateGroupModal = ({ fetchAgain, setFetchAgain, fetchMessages }) => {
 
     try {
       const { data } = await axios.put(
-        "http://localhost:3001/api/chat/renameGroup",
+        `${import.meta.env.VITE_API_URL}/api/chat/renameGroup`,
         { chatId: selectedChat._id, chatName: groupChatName },
         { headers: { Authorization: "Bearer " + user.token } }
       );
@@ -130,7 +130,7 @@ const UpdateGroupModal = ({ fetchAgain, setFetchAgain, fetchMessages }) => {
       setLoading(true);
 
       const { data } = await axios.get(
-        `http://localhost:3001/api/user/listUsers?search=${search}`,
+        `${import.meta.env.VITE_API_URL}/api/user/listUsers?search=${search}`,
         {
           headers: {
             Authorization: "Bearer " + user.token,
@@ -173,7 +173,7 @@ const UpdateGroupModal = ({ fetchAgain, setFetchAgain, fetchMessages }) => {
 
     try {
       const { data } = await axios.put(
-        "http://localhost:3001/api/chat/addUser",
+        `${import.meta.env.VITE_API_URL}/api/chat/addUser`,
         { chatId: selectedChat._id, userId: userToAdd._id },
         { headers: { Authorization: "Bearer " + user.token } }
       );

@@ -15,7 +15,7 @@ const app = express();
 // Security configuration
 app.use(
   cors({
-    origin: "*",
+    origin: "http://localhost:5173",
   })
 );
 

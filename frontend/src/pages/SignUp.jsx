@@ -10,12 +10,16 @@ import {
 import { Link, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import axios from "axios";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 const SignUp = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(true);
+
+  useEffect(() => {
+    console.log(import.meta.env.VITE_API_URL);
+  }, []);
 
   const send = async (userData) => {
     setLoading(true);
@@ -41,13 +45,13 @@ const SignUp = () => {
     }
     try {
       let { data } = await axios.post(
-        "http://localhost:3001/api/user/register",
+        `${import.meta.env.VITE_API_URL}/api/user/register`,
         userData
       );
 
       setLoading(false);
       sessionStorage.setItem("userInfo", JSON.stringify(data));
-
+      console.log("success", data);
       navigate("/chats");
     } catch (err) {
       console.log(err);

@@ -69,7 +69,7 @@ const CreateGroupModal = () => {
       setLoading(true);
 
       const { data } = await axios.get(
-        `http://localhost:3001/api/user/listUsers?search=${search}`,
+        `${import.meta.env.VITE_API_URL}/api/user/listUsers?search=${search}`,
         {
           headers: {
             Authorization: "Bearer " + user.token,
@@ -112,7 +112,7 @@ const CreateGroupModal = () => {
 
     try {
       const { data } = await axios.post(
-        "http://localhost:3001/api/chat/createGroup",
+        `${import.meta.env.VITE_API_URL}/api/chat/createGroup`,
         { name: groupChatName, users: selectedUsers.map((user) => user._id) },
         {
           headers: { Authorization: "Bearer " + user.token },
