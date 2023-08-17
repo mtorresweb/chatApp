@@ -1,5 +1,8 @@
 # chatApp
 Chat application made wit Express, MongoDB, React and Socket.io.
+
+[![chat](https://res.cloudinary.com/dojhj2erh/image/upload/v1691940262/portfolio/startChating_cqknxc.png "chat")](https://res.cloudinary.com/dojhj2erh/image/upload/v1691940262/portfolio/startChating_cqknxc.png "chat")
+
 ## Overview
   
 In this project, I have developed a dynamic real-time chat application that leverages a comprehensive technology stack. The application is designed using React, Material UI, and styled components on the frontend, while the backend is powered by Express, MongoDB, and Socket.io. In addition, various libraries such as express-validator, helmet, express-rate-limit, and jsonwebtoken are employed to enhance security and functionality.
