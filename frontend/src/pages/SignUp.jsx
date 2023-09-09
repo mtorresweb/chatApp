@@ -28,10 +28,10 @@ const SignUp = () => {
       const picData = new FormData();
       picData.append("file", userData.pic[0]);
       picData.append("upload_preset", "chat app");
-      picData.append("cloud_name", "dojhj2erh");
+      picData.append("cloud_name", import.meta.env.VITE_CLOUDINARY_CLOUD_NAME);
       try {
         let response = await axios.post(
-          "https://api.cloudinary.com/v1_1/dojhj2erh/image/upload",
+          import.meta.env.VITE_CLOUDINARY_URL,
           picData
         );
         userData.pic = response.data.url;
