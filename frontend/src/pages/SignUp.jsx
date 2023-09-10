@@ -9,56 +9,54 @@ import {
 } from "@mui/material";
 import { Link, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
-import axios from "axios";
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { userRegister } from "../api/userApi";
+
+const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
+const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
 
 const SignUp = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(true);
 
-  useEffect(() => {
-    console.log(import.meta.env.VITE_API_URL);
-  }, []);
+  const createUser = async (userData) => {
+    let data = await userRegister(userData);
+
+    return data ? true : false;
+  };
+
+  const uploadUserAvatar = async (userData) => {
+    if (userData.pic[0]) {
+      const picData = new FormData();
+
+      picData.append("file", userData.pic[0]);
+      picData.append("upload_preset", uploadPreset);
+      picData.append("cloud_name", cloudName);
+
+      let data = await uploadUserAvatar(picData);
+      userData.pic = data.url;
+
+      return data ? true : false;
+    }
+
+    delete userData.pic;
+  };
 
   const send = async (userData) => {
     setLoading(true);
 
-    if (userData.pic[0]) {
-      const picData = new FormData();
-      picData.append("file", userData.pic[0]);
-      picData.append("upload_preset", "chat app");
-      picData.append("cloud_name", import.meta.env.VITE_CLOUDINARY_CLOUD_NAME);
-      try {
-        let response = await axios.post(
-          import.meta.env.VITE_CLOUDINARY_URL,
-          picData
-        );
-        userData.pic = response.data.url;
-        setLoading(false);
-      } catch {
-        setLoading(false);
-        setSuccess(false);
-      }
-    } else {
-      delete userData.pic;
-    }
-    try {
-      let { data } = await axios.post(
-        `${import.meta.env.VITE_API_URL}/api/user/register`,
-        userData
-      );
+    const avatarOK = uploadUserAvatar(userData);
+    const userOK = createUser(userData);
 
-      setLoading(false);
-      sessionStorage.setItem("userInfo", JSON.stringify(data));
-      console.log("success", data);
+    if (avatarOK && userOK) {
       navigate("/chats");
-    } catch (err) {
-      console.log(err);
-      setLoading(false);
-      setSuccess(false);
     }
+
+    setSuccess(false);
+    setLoading(false);
   };
+
   const { register, handleSubmit } = useForm();
 
   return (

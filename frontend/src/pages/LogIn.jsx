@@ -12,7 +12,7 @@ import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
 import { useForm } from "react-hook-form";
 import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
-import axios from "axios";
+import { userLogin } from "../api/userApi";
 
 const LogIn = () => {
   const navigate = useNavigate();
@@ -23,18 +23,13 @@ const LogIn = () => {
   const send = async (credentials) => {
     setLoading(true);
 
-    try {
-      let { data } = await axios.post(
-        `${import.meta.env.VITE_API_URL}/api/user/login`,
-        credentials
-      );
+    let data = await userLogin(credentials);
 
-      sessionStorage.setItem("userInfo", JSON.stringify(data));
-
+    if (data) {
       navigate("/chats");
-    } catch {
-      setSuccess(false);
     }
+
+    setSuccess(false);
     setLoading(false);
   };
 
