@@ -67,7 +67,9 @@ const MyChats = ({ fetchAgain, setFetchAgain }) => {
           <ReplayIcon />
         </Button>
       </Box>
-      <CreateGroupModal />
+      <Box sx={{ display: "grid", placeItems: "center" }}>
+        <CreateGroupModal />
+      </Box>
       <Box
         sx={{
           display: "flex",

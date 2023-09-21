@@ -145,7 +145,6 @@ const CreateGroupModal = () => {
           whiteSpace: "nowrap",
           width: "80%",
           maxWidth: "400px",
-          margin: "0 auto",
         }}
         onClick={handleOpen}
         variant="contained"
