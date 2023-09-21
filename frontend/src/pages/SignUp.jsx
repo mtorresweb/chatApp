@@ -10,7 +10,8 @@ import {
 import { Link, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { useState } from "react";
-import { userRegister } from "../api/userApi";
+import { userRegisterApi } from "../api/userApi";
+import { uploadUserAvatarApi } from "../api/cloudinaryApi";
 
 const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
 const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
@@ -21,7 +22,7 @@ const SignUp = () => {
   const [success, setSuccess] = useState(true);
 
   const createUser = async (userData) => {
-    let data = await userRegister(userData);
+    let data = await userRegisterApi(userData);
 
     return data ? true : false;
   };
@@ -34,27 +35,27 @@ const SignUp = () => {
       picData.append("upload_preset", uploadPreset);
       picData.append("cloud_name", cloudName);
 
-      let data = await uploadUserAvatar(picData);
+      let data = await uploadUserAvatarApi(picData);
       userData.pic = data.url;
 
       return data ? true : false;
     }
-
     delete userData.pic;
+    return true;
   };
 
   const send = async (userData) => {
     setLoading(true);
 
-    const avatarOK = uploadUserAvatar(userData);
-    const userOK = createUser(userData);
+    const avatarOK = await uploadUserAvatar(userData);
+    const userOK = await createUser(userData);
+    setLoading(false);
 
     if (avatarOK && userOK) {
       navigate("/chats");
     }
 
     setSuccess(false);
-    setLoading(false);
   };
 
   const { register, handleSubmit } = useForm();

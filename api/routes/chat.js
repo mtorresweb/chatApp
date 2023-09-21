@@ -7,6 +7,7 @@ const {
   validateRemoveFromGroup,
   validateRenameGroup,
   validateUserId,
+  validateLeaveGroup,
 } = require("../middlewares/validators/chatValidator.js");
 
 const router = Router();
@@ -37,5 +38,11 @@ router.put(
 );
 router.post("/access", check.auth, validateUserId(), chatController.accessChat);
 router.get("/getChats", check.auth, chatController.getChats);
+router.get(
+  "/leaveGroup/:groupId",
+  check.auth,
+  validateLeaveGroup(),
+  chatController.leaveGroup
+);
 
 module.exports = router;

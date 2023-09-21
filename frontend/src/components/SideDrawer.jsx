@@ -1,35 +1,18 @@
-import {
-  Alert,
-  Avatar,
-  Badge,
-  Box,
-  Button,
-  CircularProgress,
-  Drawer,
-  Menu,
-  MenuItem,
-  Skeleton,
-  Snackbar,
-  TextField,
-} from "@mui/material";
-import { useEffect, useState } from "react";
+import { Avatar, Badge, Box, Button, Menu, MenuItem } from "@mui/material";
+import { useState } from "react";
 import { PersonSearchOutlined } from "@mui/icons-material";
 import NotificationsIcon from "@mui/icons-material/Notifications";
 import { ChatState } from "../Context/ChatProvider";
 import ProfileModal from "./ProfileModal";
 import { useNavigate } from "react-router-dom";
-import LogoutIcon from "@mui/icons-material/Logout";
-import axios from "axios";
-import UserListItem from "./UserListItem";
 import { getSender } from "../chat methods";
-import { socket } from "../socket";
+import MyDrawer from "./MyDrawer";
 
 export const SideDrawer = () => {
   const {
     user,
     setUser,
     setSelectedChat,
-    chats,
     setChats,
     notifications,
     setNotifications,
@@ -37,83 +20,14 @@ export const SideDrawer = () => {
 
   const navigate = useNavigate();
 
-  //search user
-  const [search, setSearch] = useState("");
-  const [searchResults, setSearchResults] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [loadingChat, setLoadingChat] = useState(false);
-  const [error, setError] = useState({
-    value: false,
-    message: "",
-  });
-
-  const handleSearch = async () => {
-    if (!search) {
-      setError({ value: true, message: "Search input is empty" });
-      return;
-    }
-
-    try {
-      setLoading(true);
-      const { data } = await axios.get(
-        `${import.meta.env.VITE_API_URL}/api/user/listUsers?search=${search}`,
-        {
-          headers: {
-            Authorization: "Bearer " + user.token,
-          },
-        }
-      );
-
-      setLoading(false);
-      setSearchResults(data);
-
-      if (data.length == 0) {
-        setError({ value: true, message: "No users found" });
-      }
-    } catch {
-      setLoading(false);
-      setError({ value: true, message: "Error searching user" });
-      return;
-    }
-  };
-
-  const accessChat = async (userId) => {
-    try {
-      setLoadingChat(true);
-
-      const { data } = await axios.post(
-        `${import.meta.env.VITE_API_URL}/api/chat/access`,
-        { userId },
-        {
-          headers: { Authorization: "Bearer " + user.token },
-        }
-      );
-      if (!chats.find((c) => c._id === data._id)) setChats([data, ...chats]);
-
-      setLoadingChat(false);
-      setSelectedChat(data);
-
-      socket.emit("createChat", {
-        _id: data._id,
-        users: data.users.filter((u) => u._id != user._id),
-      });
-    } catch {
-      setLoadingChat(false);
-      setError({ value: true, message: "Error loading chat" });
-      return;
-    }
-  };
-
   //menu profile
   const [anchorEl, setAnchorEl] = useState(null);
-  const [open, setOpen] = useState(false);
-  useEffect(() => {
-    setOpen(Boolean(anchorEl));
-  }, [anchorEl]);
+  const open = Boolean(anchorEl);
 
   const handleClick = (event) => {
     setAnchorEl(event.currentTarget);
   };
+
   const handleClose = () => {
     setAnchorEl(null);
   };
@@ -121,9 +35,11 @@ export const SideDrawer = () => {
   //menu notifications
   const [anchorNotifications, setAnchorNotifications] = useState(null);
   const openNotifications = Boolean(anchorNotifications);
+
   const handleClickNotifications = (event) => {
     setAnchorNotifications(event.currentTarget);
   };
+
   const handleCloseNotifications = () => {
     setAnchorNotifications(null);
   };
@@ -132,8 +48,6 @@ export const SideDrawer = () => {
   const [state, setState] = useState(false);
 
   const toggleDrawer = (open) => {
-    setSearch("");
-    setSearchResults([]);
     setState(open);
   };
 
@@ -163,111 +77,7 @@ export const SideDrawer = () => {
         >
           Search user
         </Button>
-        <Drawer
-          variant="temporary"
-          anchor={"left"}
-          open={state}
-          onClose={() => toggleDrawer(false)}
-        >
-          <Box
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              padding: "20px",
-            }}
-          >
-            <Box
-              style={{ flex: 1.5, display: "flex", justifyContent: "flex-end" }}
-            >
-              Search User
-            </Box>
-            <Box
-              style={{ flex: 1, display: "flex", justifyContent: "flex-end" }}
-            >
-              <Button onClick={() => toggleDrawer(false)}>
-                <LogoutIcon />
-              </Button>
-            </Box>
-          </Box>
-          <Box
-            sx={{ display: "flex", gap: "20px", padding: "0 20px" }}
-            role="presentation"
-          >
-            <TextField
-              label="search by name or email"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-            <Button variant="outlined" onClick={handleSearch}>
-              Find
-            </Button>
-            <Snackbar
-              open={error.value}
-              autoHideDuration={6000}
-              onClose={() => setError({ value: false, message: "" })}
-            >
-              <Alert
-                onClose={() => setError({ value: false, message: "" })}
-                severity="warning"
-                variant="filled"
-                sx={{ width: "100%" }}
-              >
-                {error.message}
-              </Alert>
-            </Snackbar>
-          </Box>
-          {loading ? (
-            <Box sx={{ width: 300, margin: "15px auto" }}>
-              <Skeleton />
-              <Skeleton />
-              <Skeleton />
-              <Skeleton />
-              <Skeleton />
-              <Skeleton />
-              <Skeleton />
-              <Skeleton />
-              <Skeleton />
-              <Skeleton />
-              <Skeleton />
-              <Skeleton />
-              <Skeleton />
-              <Skeleton />
-              <Skeleton />
-            </Box>
-          ) : (
-            <Box
-              sx={{
-                paddingTop: "15px",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                gap: "10px",
-              }}
-            >
-              {searchResults.map((user) => (
-                <UserListItem
-                  key={user._id}
-                  user={user}
-                  handleClick={() => accessChat(user._id)}
-                  small={true}
-                />
-              ))}
-            </Box>
-          )}
-          {loadingChat ? (
-            <Box
-              sx={{
-                display: "flex",
-                justifyContent: "center",
-                marginTop: "15px",
-              }}
-            >
-              <CircularProgress />
-            </Box>
-          ) : (
-            <></>
-          )}
-        </Drawer>
+        <MyDrawer state={state} toggleDrawer={toggleDrawer} />
         <p className="button__text">Chat App</p>
         <Box sx={{ display: "flex" }}>
           <Button
@@ -290,9 +100,9 @@ export const SideDrawer = () => {
               "aria-labelledby": "basic-button",
             }}
           >
-            {notifications.map((notification) => (
+            {notifications.map((notification, i) => (
               <MenuItem
-                key={notification._id}
+                key={i}
                 onClick={() => {
                   setSelectedChat(notification.chat);
                   setNotifications((prevNotifications) =>

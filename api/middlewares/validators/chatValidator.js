@@ -1,4 +1,4 @@
-const { body } = require("express-validator");
+const { body, param } = require("express-validator");
 const validateResults = require("../validationHandler");
 
 const validateCreateGroup = () => [
@@ -30,10 +30,16 @@ const validateRenameGroup = () => [
   (req, res, next) => validateResults(req, res, next),
 ];
 
+const validateLeaveGroup = () => [
+  param("groupId", "A chat id is required").exists().trim().escape(),
+  (req, res, next) => validateResults(req, res, next),
+];
+
 module.exports = {
   validateCreateGroup,
   validateUserId,
   validateAddToGroup,
   validateRemoveFromGroup,
   validateRenameGroup,
+  validateLeaveGroup,
 };

@@ -23,7 +23,9 @@ const Chats = () => {
           maxWidth="xl"
           sx={{ display: "flex", gap: "20px", height: "100%" }}
         >
-          {user && <MyChats fetchAgain={fetchAgain} />}
+          {user && (
+            <MyChats fetchAgain={fetchAgain} setFetchAgain={setFetchAgain} />
+          )}
           {user && (
             <ChatBox fetchAgain={fetchAgain} setFetchAgain={setFetchAgain} />
           )}

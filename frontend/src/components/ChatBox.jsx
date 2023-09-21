@@ -19,7 +19,7 @@ const ChatBox = ({ fetchAgain, setFetchAgain }) => {
   const { selectedChat } = ChatState();
 
   return (
-    <Chat display={selectedChat._id}>
+    <Chat display={selectedChat?._id || null}>
       <SingleChat fetchAgain={fetchAgain} setFetchAgain={setFetchAgain} />
     </Chat>
   );

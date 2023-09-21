@@ -1,26 +1,21 @@
 import { ChatState } from "../Context/ChatProvider";
-import {
-  Alert,
-  Box,
-  CircularProgress,
-  IconButton,
-  Snackbar,
-  TextField,
-} from "@mui/material";
+import { Box, CircularProgress, IconButton, TextField } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import UpdateGroupModal from "./UpdateGroupModal";
 import { getSender, getUser } from "../chat methods";
 import ProfileModal from "./ProfileModal";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Send } from "@mui/icons-material";
-import axios from "axios";
 import ScrollableChat from "./ScrollableChat";
 import { socket } from "../socket";
+import { getMessagesApi, sendMessageApi } from "../api/messageApi";
+import MyAlert from "./MyAlert";
 let currentChat;
 
 const SingleChat = ({ fetchAgain, setFetchAgain }) => {
   const { user, selectedChat, setSelectedChat, setNotifications, chats } =
     ChatState();
+  const loggedUser = useRef(user);
   const [socketConnected, setSocketConnected] = useState(false);
 
   const [messages, setMessages] = useState([]);
@@ -30,57 +25,51 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
   const [isTyping, setIsTyping] = useState(false);
   const [typingTimer, setTypingTimer] = useState();
 
-  const [info, setInfo] = useState({
-    value: false,
+  const [alert, setAlert] = useState({
+    active: false,
     message: "",
     severity: "success",
   });
 
   const fetchMessages = async () => {
-    if (!selectedChat._id) return;
+    if (!selectedChat?._id) return;
 
     setLoading(true);
-    try {
-      const { data } = await axios.get(
-        `${import.meta.env.VITE_API_URL}/api/message/getMessages/${
-          selectedChat._id
-        }`,
-        { headers: { Authorization: "Bearer " + user.token } }
-      );
 
-      setMessages(data);
-    } catch {
-      setInfo({
-        value: true,
+    const data = await getMessagesApi(selectedChat, user);
+    setLoading(false);
+
+    if (!data) {
+      setAlert({
+        active: true,
         message: "Error fetching messages",
         severity: "error",
       });
+      return;
     }
-    setLoading(false);
+
+    setMessages(data);
   };
 
   const sendMessage = async (e, buttonClicked = false) => {
     if ((e.key == "Enter" || buttonClicked) && newMessage) {
-      try {
-        socket.emit("stop typing", selectedChat._id);
-        setTyping(false);
+      socket.emit("stop typing", selectedChat._id);
+      setTyping(false);
 
-        const { data } = await axios.post(
-          `${import.meta.env.VITE_API_URL}/api/message/send`,
-          { content: newMessage, chatId: selectedChat._id },
-          { headers: { Authorization: "Bearer " + user.token } }
-        );
+      const data = await sendMessageApi(newMessage, selectedChat, user);
+      setNewMessage("");
 
-        setNewMessage("");
-        setMessages((messages) => [...messages, data]);
-        socket.emit("new message", data);
-      } catch {
-        setInfo({
-          value: true,
+      if (!data) {
+        setAlert({
+          active: true,
           message: "Error sending message",
           severity: "error",
         });
+        return;
       }
+
+      setMessages((messages) => [...messages, data]);
+      socket.emit("new message", data);
     }
   };
 
@@ -95,6 +84,7 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
     }
   };
 
+  //handle typing effect
   useEffect(() => {
     clearTimeout(typingTimer);
 
@@ -108,15 +98,21 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
     }
   }, [newMessage]);
 
+  //subscribe to socket events
   useEffect(() => {
     socket.emit("setup", user);
     socket.on("connected", () => setSocketConnected(true));
     socket.on("typing", () => setIsTyping(true));
     socket.on("stop typing", () => setIsTyping(false));
-    socket.on("createChat", () => {
-      setFetchAgain(!fetchAgain);
+
+    socket.on("removed from group", (userId) => {
+      if (userId == loggedUser.current._id) {
+        setSelectedChat();
+        setFetchAgain(!fetchAgain);
+      }
     });
 
+    //when a message is received check if it is in from different a chat and add a notification
     socket.on("message received", (newMessageReceived) => {
       if (!currentChat || currentChat._id != newMessageReceived.chat._id) {
         setNotifications((prevNotifications) => [
@@ -128,161 +124,160 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
       }
     });
 
+    //remove subscriptions to socket events
     return () => {
       socket.removeAllListeners();
     };
   }, []);
 
+  //every time the selected chat changes, get the new messages and the current chat
   useEffect(() => {
     fetchMessages();
     currentChat = structuredClone(selectedChat);
   }, [selectedChat]);
 
+  //subscribe to chats
   useEffect(() => {
-    chats.forEach((chat) => {
+    chats?.forEach((chat) => {
       socket.emit("join chat", chat._id);
     });
   }, [chats]);
 
+  if (!selectedChat._id)
+    return (
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          height: "100%",
+        }}
+      >
+        Click on a user or group to chat
+      </Box>
+    );
+
   return (
     <>
-      {selectedChat._id ? (
-        <>
-          <Box
-            sx={{
-              width: "100%",
-              display: "flex",
-              justifyContent: "space-between",
-              padding: "10px 20px",
-              alignItems: "center",
-            }}
-          >
-            <ArrowBackIcon
-              sx={{
-                "@media (min-width: 1024px)": { display: "none" },
-                ":hover": { cursor: "pointer" },
-              }}
-              onClick={() => setSelectedChat("")}
+      <Box
+        sx={{
+          width: "100%",
+          display: "flex",
+          justifyContent: "space-between",
+          padding: "10px 20px",
+          alignItems: "center",
+        }}
+      >
+        <ArrowBackIcon
+          sx={{
+            "@media (min-width: 1024px)": { display: "none" },
+            ":hover": { cursor: "pointer" },
+          }}
+          onClick={() => setSelectedChat("")}
+        />
+        {!selectedChat.isGroupChat ? (
+          <>
+            {getSender(user, selectedChat.users)}
+            <ProfileModal user={getUser(user, selectedChat.users)} />
+          </>
+        ) : (
+          <>
+            {selectedChat.chatName.toUpperCase()}
+            <UpdateGroupModal
+              fetchAgain={fetchAgain}
+              setFetchAgain={setFetchAgain}
+              fetchMessages={fetchMessages}
             />
-            {!selectedChat.isGroupChat ? (
-              <>
-                {getSender(user, selectedChat.users)}
-                <ProfileModal user={getUser(user, selectedChat.users)} />
-              </>
-            ) : (
-              <>
-                {selectedChat.chatName.toUpperCase()}
-                <UpdateGroupModal
-                  fetchAgain={fetchAgain}
-                  setFetchAgain={setFetchAgain}
-                  fetchMessages={fetchMessages}
-                />
-              </>
-            )}
-          </Box>
-          <Box
+          </>
+        )}
+      </Box>
+      <Box
+        sx={{
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "flex-end",
+          overflowY: "hidden",
+          borderRadius: "0 0 10px 10px",
+          backgroundColor: "#c2bfbf",
+          width: "100%",
+          height: "100%",
+        }}
+      >
+        {loading ? (
+          <CircularProgress
             sx={{
-              display: "flex",
-              flexDirection: "column",
-              justifyContent: "flex-end",
-              overflowY: "hidden",
-              borderRadius: "0 0 10px 10px",
-              backgroundColor: "#c2bfbf",
-              width: "100%",
-              height: "100%",
+              alignSelf: "center",
+              margin: "auto",
             }}
-          >
-            {loading ? (
-              <CircularProgress
+          />
+        ) : (
+          <>
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                overflowY: "scroll",
+                "&::-webkit-scrollbar": { display: "none" },
+                padding: "10px",
+              }}
+            >
+              <ScrollableChat messages={messages} />
+              {isTyping ? (
+                <div className="typing">
+                  <div className="typing__dot"></div>
+                  <div className="typing__dot"></div>
+                  <div className="typing__dot"></div>
+                </div>
+              ) : (
+                <></>
+              )}
+            </Box>
+            <Box
+              sx={{
+                display: "flex",
+                backgroundColor: "#ebebeb",
+                alignItems: "center",
+                paddingLeft: "10px",
+              }}
+            >
+              <TextField
+                onKeyDown={sendMessage}
+                onChange={handleTyping}
+                value={newMessage}
+                placeholder="Enter a message"
                 sx={{
-                  alignSelf: "center",
-                  margin: "auto",
+                  flexGrow: 6,
+                  "& fieldset": { border: "none" },
                 }}
               />
-            ) : (
-              <>
-                <Box
-                  sx={{
-                    display: "flex",
-                    flexDirection: "column",
-                    overflowY: "scroll",
-                    "&::-webkit-scrollbar": { display: "none" },
-                    padding: "10px",
-                  }}
+              <Box
+                sx={{
+                  padding: "10px",
+                  height: "100%",
+                }}
+              >
+                <IconButton
+                  onClick={(e) => sendMessage(e, true)}
+                  sx={{ ":hover": { backgroundColor: "#278ff7" } }}
                 >
-                  <ScrollableChat messages={messages} />
-                  {isTyping ? (
-                    <div className="typing">
-                      <div className="typing__dot"></div>
-                      <div className="typing__dot"></div>
-                      <div className="typing__dot"></div>
-                    </div>
-                  ) : (
-                    <></>
-                  )}
-                </Box>
-                <Box
-                  sx={{
-                    display: "flex",
-                    backgroundColor: "#ebebeb",
-                    alignItems: "center",
-                    paddingLeft: "10px",
-                  }}
-                >
-                  <TextField
-                    onKeyDown={sendMessage}
-                    onChange={handleTyping}
-                    value={newMessage}
-                    placeholder="Enter a message"
-                    sx={{
-                      flexGrow: 6,
-                      "& fieldset": { border: "none" },
-                    }}
-                  />
-                  <Box
-                    sx={{
-                      padding: "10px",
-                      height: "100%",
-                    }}
-                  >
-                    <IconButton
-                      onClick={(e) => sendMessage(e, true)}
-                      sx={{ ":hover": { backgroundColor: "#278ff7" } }}
-                    >
-                      <Send />
-                    </IconButton>
-                  </Box>
-                </Box>
-              </>
-            )}
-          </Box>
-        </>
-      ) : (
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            height: "100%",
-          }}
-        >
-          Click on a user or group to chat
-        </Box>
-      )}
-      <Snackbar
-        open={info.value}
-        autoHideDuration={6000}
-        onClose={() => setInfo({ value: false, message: "", severity: "" })}
-      >
-        <Alert
-          onClose={() => setInfo({ value: false, message: "", severity: "" })}
-          severity={info.severity}
-          variant="filled"
-          sx={{ width: "100%" }}
-        >
-          {info.message}
-        </Alert>
-      </Snackbar>
+                  <Send />
+                </IconButton>
+              </Box>
+            </Box>
+          </>
+        )}
+      </Box>
+
+      <MyAlert
+        alert={alert}
+        handleClose={() =>
+          setAlert({
+            active: false,
+            message: "",
+            severity: "success",
+          })
+        }
+      />
     </>
   );
 };

@@ -1,20 +1,26 @@
 import { useEffect, useState } from "react";
 import {
-  Alert,
   Box,
   Button,
   CircularProgress,
   Divider,
   Modal,
-  Snackbar,
   TextField,
   Typography,
 } from "@mui/material";
 import { ChatState } from "../Context/ChatProvider";
 import UserBadgeItem from "./UserBadgeItem";
-import axios from "axios";
 import UserListItem from "./UserListItem";
 import VisibilityIcon from "@mui/icons-material/Visibility";
+import {
+  addUserToGroupApi,
+  leaveGroupApi,
+  removeUserFromChatApi,
+  renameGroupApi,
+} from "../api/chatApi";
+import MyAlert from "./MyAlert";
+import { userSearchApi } from "../api/userApi";
+import { socket } from "../socket";
 
 const style = {
   position: "absolute",
@@ -57,8 +63,8 @@ const UpdateGroupModal = ({ fetchAgain, setFetchAgain, fetchMessages }) => {
     setOpen(false);
   };
 
-  const [info, setInfo] = useState({
-    value: false,
+  const [alert, setAlert] = useState({
+    active: false,
     message: "",
     severity: "info",
   });
@@ -68,126 +74,128 @@ const UpdateGroupModal = ({ fetchAgain, setFetchAgain, fetchMessages }) => {
       selectedChat.groupAdmin._id !== user._id &&
       userToRemove._id !== user._id
     ) {
-      setInfo({
-        value: true,
+      setAlert({
+        active: true,
         message: "Only administrators can remove users",
         severity: "warning",
       });
       return;
     }
 
-    try {
-      const { data } = await axios.put(
-        `${import.meta.env.VITE_API_URL}/api/chat/removeUser`,
-        { chatId: selectedChat._id, userId: userToRemove._id },
-        { headers: { Authorization: "Bearer " + user.token } }
-      );
+    const data = await removeUserFromChatApi(userToRemove, selectedChat, user);
+    setGroupChatName("");
 
-      userToRemove._id === user._id ? setSelectedChat() : setSelectedChat(data);
-      setFetchAgain(!fetchAgain);
-      fetchMessages();
-    } catch {
-      setInfo({
-        value: true,
+    if (!data) {
+      setAlert({
+        active: true,
         message: "Error removing user from chat",
         severity: "error",
       });
+      return;
     }
-    setGroupChatName("");
+
+    socket.emit("removed from group", {
+      userId: userToRemove._id,
+      room: selectedChat._id,
+    });
+    setSelectedChat(data);
+    setFetchAgain(!fetchAgain);
+    fetchMessages();
   };
 
   const handleRename = async () => {
     if (!groupChatName) return;
 
-    try {
-      const { data } = await axios.put(
-        `${import.meta.env.VITE_API_URL}/api/chat/renameGroup`,
-        { chatId: selectedChat._id, chatName: groupChatName },
-        { headers: { Authorization: "Bearer " + user.token } }
-      );
+    const data = await renameGroupApi(groupChatName, selectedChat, user);
+    setGroupChatName("");
 
-      setSelectedChat(data);
-      setFetchAgain(!fetchAgain);
-      setInfo({
-        value: true,
-        message: "Chat name updated successfully",
-        severity: "success",
-      });
-    } catch {
-      setInfo({
-        value: true,
+    if (!data) {
+      setAlert({
+        active: true,
         message: "Error updating group chat name",
         severity: "error",
       });
+      return;
     }
-    setGroupChatName("");
+
+    setSelectedChat(data);
+    setFetchAgain(!fetchAgain);
+
+    setAlert({
+      active: true,
+      message: "Chat name updated successfully",
+      severity: "success",
+    });
   };
 
   const handleSearch = async () => {
     if (!search) return;
 
-    try {
-      setLoading(true);
+    setLoading(true);
 
-      const { data } = await axios.get(
-        `${import.meta.env.VITE_API_URL}/api/user/listUsers?search=${search}`,
-        {
-          headers: {
-            Authorization: "Bearer " + user.token,
-          },
-        }
-      );
+    const data = await userSearchApi(search, user);
 
-      if (data.length == 0) {
-        setInfo({ value: true, message: "No users found", severity: "info" });
-      }
-
-      setSearchResults(data);
-    } catch {
-      setInfo({
-        value: true,
-        message: "Error getting users",
-        severity: "error",
-      });
+    if (data.length == 0) {
+      setAlert({ active: true, message: "No users found", severity: "info" });
     }
+
+    setSearchResults(data);
+
     setLoading(false);
   };
 
   const addUser = async (userToAdd) => {
     if (selectedChat.users.find((u) => u._id === userToAdd._id)) {
-      setInfo({
-        value: true,
+      setAlert({
+        active: true,
         message: "User is already in group",
         severity: "warning",
       });
       return;
     }
+
     if (selectedChat.groupAdmin._id !== user._id) {
-      setInfo({
-        value: true,
+      setAlert({
+        active: true,
         message: "Only administrators can add users",
         severity: "warning",
       });
       return;
     }
 
-    try {
-      const { data } = await axios.put(
-        `${import.meta.env.VITE_API_URL}/api/chat/addUser`,
-        { chatId: selectedChat._id, userId: userToAdd._id },
-        { headers: { Authorization: "Bearer " + user.token } }
-      );
+    const data = await addUserToGroupApi(userToAdd, selectedChat, user);
+    setGroupChatName("");
 
-      setSelectedChat(data);
-      setFetchAgain(!fetchAgain);
-    } catch {
-      setInfo({
-        value: true,
+    if (!data) {
+      setAlert({
+        active: true,
         message: "Only administrators can add users",
         severity: "error",
       });
+
+      return;
     }
+
+    setSelectedChat(data);
+    setFetchAgain(!fetchAgain);
+  };
+
+  const leaveGroup = async () => {
+    const data = await leaveGroupApi(selectedChat, user);
     setGroupChatName("");
+
+    if (!data) {
+      setAlert({
+        active: true,
+        message: "Error leaving group",
+        severity: "error",
+      });
+      return;
+    }
+
+    socket.emit("leave group", selectedChat._id);
+    setSelectedChat();
+    setFetchAgain(!fetchAgain);
   };
 
   useEffect(() => {
@@ -294,7 +302,9 @@ const UpdateGroupModal = ({ fetchAgain, setFetchAgain, fetchMessages }) => {
                     cursor: "pointer",
                   }}
                 >
-                  <UserBadgeItem user={userItem} handleRemove={RemoveUser} />
+                  {userItem._id != user._id && (
+                    <UserBadgeItem user={userItem} handleRemove={RemoveUser} />
+                  )}
                 </Box>
               ))}
             </Box>
@@ -313,27 +323,23 @@ const UpdateGroupModal = ({ fetchAgain, setFetchAgain, fetchMessages }) => {
               Close
             </Button>
             <Button
-              onClick={() => RemoveUser(user)}
+              onClick={() => leaveGroup()}
               variant="contained"
               color="error"
             >
               Leave group
             </Button>
           </Box>
-          <Snackbar
-            open={info.value}
-            autoHideDuration={6000}
-            onClose={() => setInfo({ value: false, message: "" })}
-          >
-            <Alert
-              onClose={() => setInfo({ value: false, message: "" })}
-              severity={info.severity}
-              variant="filled"
-              sx={{ width: "100%" }}
-            >
-              {info.message}
-            </Alert>
-          </Snackbar>
+          <MyAlert
+            alert={alert}
+            handleClose={() =>
+              setAlert({
+                active: false,
+                message: "",
+                severity: "success",
+              })
+            }
+          />
         </Box>
       </Modal>
     </Box>

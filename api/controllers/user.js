@@ -59,12 +59,14 @@ const login = async (req, res) => {
 };
 
 const listUsers = async (req, res) => {
+  const { search } = matchedData(req);
+
   const users = await User.find({
-    name: { $regex: req.query.search, $options: "i" },
+    name: { $regex: search, $options: "i" },
   }).find({ _id: { $ne: req.user._id } });
 
   if (!users) {
-    return res.status(404).send("not found users");
+    return res.status(404).send("No users found");
   }
 
   return res.status(200).send(users);

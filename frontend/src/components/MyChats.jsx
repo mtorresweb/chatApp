@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { ChatState } from "../Context/ChatProvider";
-import axios from "axios";
-import { Box, Skeleton } from "@mui/material";
+import { Box, Button, Skeleton } from "@mui/material";
 import CreateGroupModal from "./CreateGroupModal";
 import styled from "styled-components";
 import { getSender } from "../chat methods";
+import { fetchChatsApi } from "../api/chatApi";
+import ReplayIcon from "@mui/icons-material/Replay";
 
 const Chats = styled.div`
   flex: 1;
@@ -19,7 +20,7 @@ const Chats = styled.div`
   }
 `;
 
-const MyChats = ({ fetchAgain }) => {
+const MyChats = ({ fetchAgain, setFetchAgain }) => {
   const { user, setSelectedChat, selectedChat, chats, setChats } = ChatState();
 
   const [loading, setLoading] = useState(true);
@@ -28,22 +29,17 @@ const MyChats = ({ fetchAgain }) => {
     if (!user._id) return;
 
     setLoading(true);
-    try {
-      const { data } = await axios.get(
-        `${import.meta.env.VITE_API_URL}/api/chat/getChats`,
-        { headers: { Authorization: "Bearer " + user.token } }
-      );
+    let data = await fetchChatsApi(user);
 
-      setChats(data);
-    } catch {
-      //
-    }
+    if (data) setChats(data);
   };
 
+  //it fetches chats as needed
   useEffect(() => {
     getChats();
   }, [fetchAgain, user]);
 
+  //it stops loading when the chats are fetched
   useEffect(() => {
     if (chats) {
       setLoading(false);
@@ -51,7 +47,7 @@ const MyChats = ({ fetchAgain }) => {
   }, [chats]);
 
   return (
-    <Chats display={selectedChat._id}>
+    <Chats display={selectedChat?._id}>
       <Box
         sx={{
           display: "flex",
@@ -67,8 +63,11 @@ const MyChats = ({ fetchAgain }) => {
         }}
       >
         <h2 style={{ whiteSpace: "nowrap", flex: 2 }}>My chats</h2>
-        <CreateGroupModal />
+        <Button variant="text" onClick={() => setFetchAgain(!fetchAgain)}>
+          <ReplayIcon />
+        </Button>
       </Box>
+      <CreateGroupModal />
       <Box
         sx={{
           display: "flex",

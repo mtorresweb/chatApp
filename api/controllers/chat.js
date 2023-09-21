@@ -6,14 +6,13 @@ const createGroup = async (req, res) => {
   const data = matchedData(req);
 
   let users = data.users;
+  users.push(req.user._id);
 
   if (users.length < 2) {
     return res
       .status(400)
       .send("More than 2 users are required to form a group chat");
   }
-
-  users.push(req.user._id);
 
   const groupChat = await Chat.create({
     chatName: data.name,
@@ -170,6 +169,35 @@ const addToGroup = async (req, res) => {
   return res.status(200).send(updatedChat);
 };
 
+const leaveGroup = async (req, res) => {
+  const { groupId } = matchedData(req);
+  const userId = req.user._id;
+
+  const belongsToGroup = await Chat.findOne({
+    _id: groupId,
+    users: { $in: [userId] },
+  });
+
+  if (!belongsToGroup)
+    return res.status(400).send("You are not a member of this group");
+
+  const updatedChat = await Chat.findByIdAndUpdate(
+    groupId,
+    {
+      $pull: { users: userId },
+    },
+    {
+      new: true,
+    }
+  );
+
+  if (!updatedChat) {
+    return res.status(404).send("Chat not found");
+  }
+
+  return res.status(200).json("you have left the group");
+};
+
 module.exports = {
   createGroup,
   accessChat,
@@ -177,4 +205,5 @@ module.exports = {
   renameGroup,
   removeFromGroup,
   addToGroup,
+  leaveGroup,
 };

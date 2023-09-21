@@ -12,7 +12,7 @@ import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
 import { useForm } from "react-hook-form";
 import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
-import { userLogin } from "../api/userApi";
+import { userLoginApi } from "../api/userApi";
 
 const LogIn = () => {
   const navigate = useNavigate();
@@ -23,7 +23,7 @@ const LogIn = () => {
   const send = async (credentials) => {
     setLoading(true);
 
-    let data = await userLogin(credentials);
+    let data = await userLoginApi(credentials);
 
     if (data) {
       navigate("/chats");

@@ -29,6 +29,10 @@ io.on("connection", (socket) => {
     socket.join(room);
   });
 
+  socket.on("leave group", (room) => {
+    socket.leave(room);
+  });
+
   socket.on("new message", (newMessageReceived) => {
     let chat = newMessageReceived.chat;
 
@@ -39,8 +43,8 @@ io.on("connection", (socket) => {
 
   socket.on("stop typing", (room) => socket.to(room).emit("stop typing"));
 
-  socket.on("createChat", (chat) => {
-    io.emit("createChat", chat);
+  socket.on("removed from group", (data) => {
+    socket.to(data.room).emit("removed from group", data.userId);
   });
 
   socket.off("setup", (userData) => {

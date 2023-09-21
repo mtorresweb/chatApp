@@ -15,7 +15,8 @@ function ProtectedRoute({ children }) {
     }
   }, []);
 
-  if(!user) return <></>
+  // eslint-disable-next-line no-prototype-builtins
+  if (!user || !user._id) return <></>;
 
   return <>{children ? children : <Outlet />}</>;
 }

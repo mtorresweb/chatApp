@@ -1,19 +1,19 @@
 import { Add } from "@mui/icons-material";
 import {
-  Alert,
   Box,
   Button,
   CircularProgress,
   Modal,
-  Snackbar,
   TextField,
   Typography,
 } from "@mui/material";
 import { useEffect, useState } from "react";
 import { ChatState } from "../Context/ChatProvider";
-import axios from "axios";
 import UserListItem from "./UserListItem";
 import UserBadgeItem from "./UserBadgeItem";
+import { userSearchApi } from "../api/userApi";
+import { addUsersToChatApi } from "../api/chatApi";
+import MyAlert from "./MyAlert";
 
 const style = {
   position: "absolute",
@@ -40,6 +40,7 @@ const style = {
 const CreateGroupModal = () => {
   const { user, setChats, chats } = ChatState();
 
+  // user search
   const [search, setSearch] = useState("");
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [groupChatName, setGroupChatName] = useState("");
@@ -57,41 +58,42 @@ const CreateGroupModal = () => {
     setOpen(false);
   };
 
-  const [error, setError] = useState({
-    value: false,
+  //alerts
+  const [alert, setAlert] = useState({
+    active: false,
     message: "",
+    severity: "success",
   });
 
+  //functions
   const handleSearch = async () => {
     if (!search) return;
 
-    try {
-      setLoading(true);
+    setLoading(true);
 
-      const { data } = await axios.get(
-        `${import.meta.env.VITE_API_URL}/api/user/listUsers?search=${search}`,
-        {
-          headers: {
-            Authorization: "Bearer " + user.token,
-          },
-        }
-      );
-
-      if (data.length == 0) {
-        setError({ value: true, message: "No users found" });
-      }
-
-      setSearchResults(data);
-    } catch {
-      setError({ value: true, message: "Error getting users" });
-    }
+    let data = await userSearchApi(search, user);
     setLoading(false);
+
+    if (data.length == 0) {
+      setAlert({
+        active: true,
+        message: "No users found",
+        severity: "warning",
+      });
+    }
+
+    setSearchResults(data);
   };
 
   const addUser = (userToAdd) => {
     for (let index = 0; index < selectedUsers.length; index++) {
       if (selectedUsers[index]._id == userToAdd._id) {
-        setError({ value: true, message: "User already selected" });
+        setAlert({
+          active: true,
+          message: "User already selected",
+          severity: "warning",
+        });
+
         return;
       }
     }
@@ -105,25 +107,30 @@ const CreateGroupModal = () => {
   };
 
   const handleSubmit = async () => {
-    if (!selectedUsers || !groupChatName) {
-      setError({ value: true, message: "Please fill out the fields" });
+    if (selectedUsers.length < 2 || !groupChatName) {
+      setAlert({
+        active: true,
+        message:
+          "Check the fields, more than two users are required to create a group",
+        severity: "warning",
+      });
+
       return;
     }
 
-    try {
-      const { data } = await axios.post(
-        `${import.meta.env.VITE_API_URL}/api/chat/createGroup`,
-        { name: groupChatName, users: selectedUsers.map((user) => user._id) },
-        {
-          headers: { Authorization: "Bearer " + user.token },
-        }
-      );
+    let data = await addUsersToChatApi(groupChatName, selectedUsers, user);
 
-      setChats([data, ...chats]);
-      handleClose();
-    } catch {
-      setError({ value: true, message: "Error creating group chat" });
+    if (!data) {
+      setAlert({
+        active: true,
+        message: "Error creating group chat",
+        severity: "error",
+      });
+      return;
     }
+
+    setChats([data, ...chats]);
+    handleClose();
   };
 
   useEffect(() => {
@@ -136,8 +143,9 @@ const CreateGroupModal = () => {
         sx={{
           flex: 1,
           whiteSpace: "nowrap",
-          maxWidth: "150px",
-          minWidth: "120px",
+          width: "80%",
+          maxWidth: "400px",
+          margin: "0 auto",
         }}
         onClick={handleOpen}
         variant="contained"
@@ -173,6 +181,7 @@ const CreateGroupModal = () => {
               onChange={(e) => setSearch(e.target.value)}
             />
           </Box>
+          {/* It displays the selected users list of the new group */}
           {selectedUsers.length > 0 && (
             <Box
               sx={{
@@ -197,9 +206,11 @@ const CreateGroupModal = () => {
               ))}
             </Box>
           )}
+          {/* when searching for a user, shows circular progress while loading; otherwise, it displays a list of matching users. */}
           {loading ? (
             <CircularProgress />
-          ) : searchResults.length > 0 ? (
+          ) : /* if there are matching users it shows the list; otherwise, shows nothing */
+          searchResults.length > 0 ? (
             <Box
               sx={{
                 display: "flex",
@@ -256,20 +267,16 @@ const CreateGroupModal = () => {
               Create
             </Button>
           </Box>
-          <Snackbar
-            open={error.value}
-            autoHideDuration={6000}
-            onClose={() => setError({ value: false, message: "" })}
-          >
-            <Alert
-              onClose={() => setError({ value: false, message: "" })}
-              severity="warning"
-              variant="filled"
-              sx={{ width: "100%" }}
-            >
-              {error.message}
-            </Alert>
-          </Snackbar>
+          <MyAlert
+            alert={alert}
+            handleClose={() =>
+              setAlert({
+                active: false,
+                message: "",
+                severity: "success",
+              })
+            }
+          />
         </Box>
       </Modal>
     </>
