@@ -1,5 +1,4 @@
 import {
-  Alert,
   Box,
   Button,
   Container,
@@ -9,54 +8,29 @@ import {
 } from "@mui/material";
 import { Link, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
-import { useState } from "react";
-import { userRegisterApi } from "../api/userApi";
-import { uploadUserAvatarApi } from "../api/cloudinaryApi";
-
-const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
-const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
+import { uploadUserAvatar } from "../api/cloudinaryApi";
+import MyAlert from "../components/MyAlert";
+import useAxios from "../helpers/useAxios";
+import { useEffect } from "react";
 
 const SignUp = () => {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(true);
-
-  const createUser = async (userData) => {
-    let data = await userRegisterApi(userData);
-
-    return data ? true : false;
-  };
-
-  const uploadUserAvatar = async (userData) => {
-    if (userData.pic[0]) {
-      const picData = new FormData();
-
-      picData.append("file", userData.pic[0]);
-      picData.append("upload_preset", uploadPreset);
-      picData.append("cloud_name", cloudName);
-
-      let data = await uploadUserAvatarApi(picData);
-      userData.pic = data.url;
-
-      return data ? true : false;
-    }
-    delete userData.pic;
-    return true;
-  };
+  const createUser = useAxios({
+    method: "post",
+    url: "user/register",
+  });
 
   const send = async (userData) => {
-    setLoading(true);
+    await uploadUserAvatar(userData);
+    await createUser.fetchData(userData);
+  };
 
-    const avatarOK = await uploadUserAvatar(userData);
-    const userOK = await createUser(userData);
-    setLoading(false);
-
-    if (avatarOK && userOK) {
+  useEffect(() => {
+    if (createUser.response) {
+      sessionStorage.setItem("userInfo", JSON.stringify(createUser.response));
       navigate("/chats");
     }
-
-    setSuccess(false);
-  };
+  }, [createUser]);
 
   const { register, handleSubmit } = useForm();
 
@@ -118,7 +92,7 @@ const SignUp = () => {
             variant="contained"
             sx={{ mt: 3, mb: 2 }}
           >
-            {loading ? "Loading..." : "Sign Up"}
+            {createUser.loading ? "Loading..." : "Sign Up"}
           </Button>
           <Grid container>
             <Grid item xs>
@@ -128,11 +102,10 @@ const SignUp = () => {
             </Grid>
           </Grid>
         </Box>
-        {success ? (
-          <></>
-        ) : (
-          <Alert severity="error">Error uploading image or creating user</Alert>
-        )}
+        <MyAlert
+          alert={createUser.alert}
+          handleClose={() => createUser.resetAlert()}
+        />
       </Box>
     </Container>
   );

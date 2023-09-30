@@ -8,8 +8,7 @@ const validateResults = (req, res, next) => {
 
   return res.status(400).send({
     success: "false",
-    message: "The information sent is invalid",
-    errors: errors.array(),
+    message: errors.array({ onlyFirstError: true })[0].msg,
   });
 };
 

@@ -33,6 +33,15 @@ const getMessages = async (req, res) => {
     .populate("sender", "name pic email")
     .populate("chat");
 
+  if (!chatId.users.includes(req.user._id)) {
+    return res
+      .status(403)
+      .send({
+        success: false,
+        message: "You are not allowed to access this chat",
+      });
+  }
+
   return res.status(200).send(messages);
 };
 

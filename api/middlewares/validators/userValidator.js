@@ -2,9 +2,11 @@ const { body, query } = require("express-validator");
 const validateResults = require("../validationHandler");
 
 const validateUserRegister = () => [
-  body("name", "The user  name is required")
+  body("name")
     .exists()
+    .withMessage("The user  name is required")
     .isLength({ min: 3, max: 25 })
+    .withMessage("name must be between 3 and 25 characters")
     .trim()
     .escape(),
   body("email", "A valid email address is required")
@@ -13,12 +15,12 @@ const validateUserRegister = () => [
     .trim()
     .escape()
     .normalizeEmail(),
-  body("password", "A strong password is required")
+  body("password", "Password is required")
     .exists()
     //.isStrongPassword()
     .trim()
     .escape(),
-  body("pic").optional().isURL(),
+  body("pic").isURL().optional(),
   (req, res, next) => validateResults(req, res, next),
 ];
 
@@ -29,7 +31,7 @@ const validateUserLogIn = () => [
     .trim()
     .escape()
     .normalizeEmail(),
-  body("password", "A strong password is required")
+  body("password", "Password is required")
     .exists()
     //.isStrongPassword()
     .trim()

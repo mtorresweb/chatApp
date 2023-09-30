@@ -11,7 +11,10 @@ const createGroup = async (req, res) => {
   if (users.length < 2) {
     return res
       .status(400)
-      .send("More than 2 users are required to form a group chat");
+      .send({
+        success: false,
+        message: "More than 2 users are required to form a group chat",
+      });
   }
 
   const groupChat = await Chat.create({
@@ -32,7 +35,9 @@ const accessChat = async (req, res) => {
   const { userId } = matchedData(req);
 
   if (!userId) {
-    return res.status(400).send("User id is required");
+    return res
+      .status(400)
+      .send({ success: false, message: "User id is required" });
   }
 
   var isChat = await Chat.find({
@@ -101,7 +106,7 @@ const renameGroup = async (req, res) => {
     .populate("groupAdmin", "-password");
 
   if (!updatedChat) {
-    return res.status(404).send("Chat not found");
+    return res.status(404).send({ success: false, message: "Chat not found" });
   }
 
   return res.status(200).send(updatedChat);
@@ -116,7 +121,9 @@ const removeFromGroup = async (req, res) => {
   });
 
   if (!isAdmin) {
-    return res.status(403).send("You are not an admin of this group");
+    return res
+      .status(403)
+      .send({ success: false, message: "You are not an admin of this group" });
   }
 
   const updatedChat = await Chat.findByIdAndUpdate(
@@ -132,7 +139,7 @@ const removeFromGroup = async (req, res) => {
     .populate("groupAdmin", "-password");
 
   if (!updatedChat) {
-    return res.status(404).send("Chat not found");
+    return res.status(404).send({ success: false, message: "Chat not found" });
   }
 
   return res.status(200).json(updatedChat);
@@ -147,7 +154,9 @@ const addToGroup = async (req, res) => {
   });
 
   if (!isAdmin) {
-    return res.status(403).send("You are not an admin of this group");
+    return res
+      .status(403)
+      .send({ success: false, message: "You are not an admin of this group" });
   }
 
   const updatedChat = await Chat.findByIdAndUpdate(
@@ -163,7 +172,7 @@ const addToGroup = async (req, res) => {
     .populate("groupAdmin", "-password");
 
   if (!updatedChat) {
-    return res.status(404).send("Chat not found");
+    return res.status(404).send({ success: false, message: "Chat not found" });
   }
 
   return res.status(200).send(updatedChat);
@@ -179,7 +188,9 @@ const leaveGroup = async (req, res) => {
   });
 
   if (!belongsToGroup)
-    return res.status(400).send("You are not a member of this group");
+    return res
+      .status(400)
+      .send({ success: false, message: "You are not a member of this group" });
 
   const updatedChat = await Chat.findByIdAndUpdate(
     groupId,
@@ -192,7 +203,7 @@ const leaveGroup = async (req, res) => {
   );
 
   if (!updatedChat) {
-    return res.status(404).send("Chat not found");
+    return res.status(404).send({ success: false, message: "Chat not found" });
   }
 
   return res.status(200).json("you have left the group");

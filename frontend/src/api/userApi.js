@@ -7,7 +7,8 @@ export const userLoginApi = async (credentials) => {
     let { data } = await axios.post(`${endpoint}/login`, credentials);
     sessionStorage.setItem("userInfo", JSON.stringify(data));
     return data;
-  } catch {
+  } catch (e) {
+    console.log(e);
     return {};
   }
 };
@@ -17,7 +18,8 @@ export const userRegisterApi = async (userData) => {
     let { data } = await axios.post(`${endpoint}/register`, userData);
     sessionStorage.setItem("userInfo", JSON.stringify(data));
     return data;
-  } catch {
+  } catch (e) {
+    console.log(e.response.data);
     return {};
   }
 };

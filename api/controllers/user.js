@@ -9,7 +9,9 @@ const register = async (req, res) => {
   const user = await User.findOne({ email: data.email });
 
   if (user) {
-    return res.status(400).send("User already exists");
+    return res
+      .status(400)
+      .send({ success: false, message: "User already exists" });
   }
 
   data.password = await bcrypt.hash(data.password, 14);
@@ -66,7 +68,7 @@ const listUsers = async (req, res) => {
   }).find({ _id: { $ne: req.user._id } });
 
   if (!users) {
-    return res.status(404).send("No users found");
+    return res.status(404).send({ success: false, message: "No users found" });
   }
 
   return res.status(200).send(users);

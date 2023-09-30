@@ -1,5 +1,4 @@
 import {
-  Alert,
   Avatar,
   Box,
   Button,
@@ -11,27 +10,28 @@ import {
 import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
 import { useForm } from "react-hook-form";
 import { Link, useNavigate } from "react-router-dom";
-import { useState } from "react";
-import { userLoginApi } from "../api/userApi";
+import { useEffect } from "react";
+import useAxios from "../helpers/useAxios";
+import MyAlert from "../components/MyAlert";
 
 const LogIn = () => {
+  const { response, loading, fetchData, alert, resetAlert } = useAxios({
+    method: "post",
+    url: "user/login",
+  });
+
   const navigate = useNavigate();
 
-  const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(true);
-
   const send = async (credentials) => {
-    setLoading(true);
+    await fetchData(credentials);
+  };
 
-    let data = await userLoginApi(credentials);
-
-    if (data) {
+  useEffect(() => {
+    if (response) {
+      sessionStorage.setItem("userInfo", JSON.stringify(response));
       navigate("/chats");
     }
-
-    setSuccess(false);
-    setLoading(false);
-  };
+  }, [response]);
 
   const { register, handleSubmit } = useForm();
 
@@ -67,6 +67,7 @@ const LogIn = () => {
             name="email"
             autoComplete="email"
             autoFocus
+            type="email"
           />
           <TextField
             {...register("password")}
@@ -95,7 +96,7 @@ const LogIn = () => {
             </Grid>
           </Grid>
         </Box>
-        {success ? <></> : <Alert severity="error">Error while logging</Alert>}
+        <MyAlert alert={alert} handleClose={() => resetAlert()} />
       </Box>
     </Container>
   );
