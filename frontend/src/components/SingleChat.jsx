@@ -8,70 +8,79 @@ import { useEffect, useRef, useState } from "react";
 import { Send } from "@mui/icons-material";
 import ScrollableChat from "./ScrollableChat";
 import { socket } from "../socket";
-import { getMessagesApi, sendMessageApi } from "../api/messageApi";
-import MyAlert from "./MyAlert";
-let currentChat;
+import useAxios from "../hooks/useAxios";
+
+let currentChat = {};
+let currentChats = [];
 
 const SingleChat = ({ fetchAgain, setFetchAgain }) => {
-  const { user, selectedChat, setSelectedChat, setNotifications, chats } =
-    ChatState();
+  const {
+    user,
+    selectedChat,
+    setSelectedChat,
+    setNotifications,
+    chats,
+    setChats,
+  } = ChatState();
+
+  const getMessages = useAxios({
+    method: "get",
+    url: `message/getMessages/${selectedChat._id}`,
+    headers: {
+      authorization: "Bearer " + user.token,
+    },
+  });
+
+  const sendAMessage = useAxios({
+    method: "post",
+    url: `message/send`,
+    headers: {
+      authorization: "Bearer " + user.token,
+    },
+  });
+
   const loggedUser = useRef(user);
+
   const [socketConnected, setSocketConnected] = useState(false);
 
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
-  const [loading, setLoading] = useState(false);
+
   const [typing, setTyping] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [typingTimer, setTypingTimer] = useState();
 
-  const [alert, setAlert] = useState({
-    active: false,
-    message: "",
-    severity: "success",
-  });
-
   const fetchMessages = async () => {
     if (!selectedChat?._id) return;
 
-    setLoading(true);
-
-    const data = await getMessagesApi(selectedChat, user);
-    setLoading(false);
-
-    if (!data) {
-      setAlert({
-        active: true,
-        message: "Error fetching messages",
-        severity: "error",
-      });
-      return;
-    }
-
-    setMessages(data);
+    await getMessages.fetchData();
   };
+
+  useEffect(() => {
+    if (getMessages.response) {
+      setMessages(getMessages.response);
+    }
+  }, [getMessages.response]);
 
   const sendMessage = async (e, buttonClicked = false) => {
     if ((e.key == "Enter" || buttonClicked) && newMessage) {
       socket.emit("stop typing", selectedChat._id);
       setTyping(false);
 
-      const data = await sendMessageApi(newMessage, selectedChat, user);
-      setNewMessage("");
-
-      if (!data) {
-        setAlert({
-          active: true,
-          message: "Error sending message",
-          severity: "error",
-        });
-        return;
-      }
-
-      setMessages((messages) => [...messages, data]);
-      socket.emit("new message", data);
+      await sendAMessage.fetchData({
+        content: newMessage,
+        chatId: selectedChat._id,
+      });
     }
   };
+
+  useEffect(() => {
+    if (sendAMessage.response) {
+      setNewMessage("");
+      setMessages((messages) => [...messages, sendAMessage.response]);
+      socket.emit("new message", sendAMessage.response);
+    }
+  }, [sendAMessage.response]);
 
   const handleTyping = (e) => {
     setNewMessage(e.target.value);
@@ -100,15 +109,25 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
 
   //subscribe to socket events
   useEffect(() => {
+    socket.connect();
     socket.emit("setup", user);
+
+    //remove subscriptions to socket events
+    return () => {
+      socket.off("setup");
+      socket.disconnect();
+    };
+  }, []);
+
+  useEffect(() => {
     socket.on("connected", () => setSocketConnected(true));
     socket.on("typing", () => setIsTyping(true));
     socket.on("stop typing", () => setIsTyping(false));
 
     socket.on("removed from group", (userId) => {
       if (userId == loggedUser.current._id) {
-        setSelectedChat();
-        setFetchAgain(!fetchAgain);
+        setChats(currentChats.filter((chat) => chat._id !== currentChat._id));
+        setSelectedChat({});
       }
     });
 
@@ -124,9 +143,13 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
       }
     });
 
-    //remove subscriptions to socket events
     return () => {
-      socket.removeAllListeners();
+      socket.off("connected");
+      socket.off("typing");
+      socket.off("stop typing");
+      socket.off("someone left");
+      socket.off("removed from group");
+      socket.off("message received");
     };
   }, []);
 
@@ -134,14 +157,15 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
   useEffect(() => {
     fetchMessages();
     currentChat = structuredClone(selectedChat);
-  }, [selectedChat]);
+    currentChats = structuredClone(chats);
+  }, [selectedChat, currentChat, chats, currentChats]);
 
   //subscribe to chats
   useEffect(() => {
-    chats?.forEach((chat) => {
+    chats.forEach((chat) => {
       socket.emit("join chat", chat._id);
     });
-  }, [chats]);
+  }, [chats, socket]);
 
   if (!selectedChat._id)
     return (
@@ -173,7 +197,7 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
             "@media (min-width: 1024px)": { display: "none" },
             ":hover": { cursor: "pointer" },
           }}
-          onClick={() => setSelectedChat("")}
+          onClick={() => setSelectedChat({})}
         />
         {!selectedChat.isGroupChat ? (
           <>
@@ -203,7 +227,7 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
           height: "100%",
         }}
       >
-        {loading ? (
+        {getMessages.loading ? (
           <CircularProgress
             sx={{
               alignSelf: "center",
@@ -267,17 +291,6 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
           </>
         )}
       </Box>
-
-      <MyAlert
-        alert={alert}
-        handleClose={() =>
-          setAlert({
-            active: false,
-            message: "",
-            severity: "success",
-          })
-        }
-      />
     </>
   );
 };

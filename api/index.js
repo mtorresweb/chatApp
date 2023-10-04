@@ -30,7 +30,7 @@ io.on("connection", (socket) => {
   });
 
   socket.on("leave group", (room) => {
-    socket.leave(room);
+    socket.leave(room._id);
   });
 
   socket.on("new message", (newMessageReceived) => {
@@ -45,9 +45,5 @@ io.on("connection", (socket) => {
 
   socket.on("removed from group", (data) => {
     socket.to(data.room).emit("removed from group", data.userId);
-  });
-
-  socket.off("setup", (userData) => {
-    socket.leave(userData._id);
   });
 });

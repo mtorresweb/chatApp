@@ -1,11 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { ChatState } from "../Context/ChatProvider";
 import { Box, Button, Skeleton } from "@mui/material";
 import CreateGroupModal from "./CreateGroupModal";
 import styled from "styled-components";
 import { getSender } from "../chat methods";
-import { fetchChatsApi } from "../api/chatApi";
 import ReplayIcon from "@mui/icons-material/Replay";
+import useAxios from "../hooks/useAxios";
 
 const Chats = styled.div`
   flex: 1;
@@ -23,15 +23,16 @@ const Chats = styled.div`
 const MyChats = ({ fetchAgain, setFetchAgain }) => {
   const { user, setSelectedChat, selectedChat, chats, setChats } = ChatState();
 
-  const [loading, setLoading] = useState(true);
+  const fetchChats = useAxios({
+    method: "get",
+    url: "chat/getChats",
+    headers: {
+      authorization: "Bearer " + user.token,
+    },
+  });
 
   const getChats = async () => {
-    if (!user._id) return;
-
-    setLoading(true);
-    let data = await fetchChatsApi(user);
-
-    if (data) setChats(data);
+    await fetchChats.fetchData();
   };
 
   //it fetches chats as needed
@@ -41,10 +42,15 @@ const MyChats = ({ fetchAgain, setFetchAgain }) => {
 
   //it stops loading when the chats are fetched
   useEffect(() => {
-    if (chats) {
-      setLoading(false);
+    if (fetchChats.response) {
+      setChats(fetchChats.response);
     }
-  }, [chats]);
+  }, [fetchChats.response]);
+
+  const reload = () => {
+    setSelectedChat({});
+    setFetchAgain(!fetchAgain);
+  };
 
   return (
     <Chats display={selectedChat?._id}>
@@ -63,7 +69,7 @@ const MyChats = ({ fetchAgain, setFetchAgain }) => {
         }}
       >
         <h2 style={{ whiteSpace: "nowrap", flex: 2 }}>My chats</h2>
-        <Button variant="text" onClick={() => setFetchAgain(!fetchAgain)}>
+        <Button variant="text" onClick={reload}>
           <ReplayIcon />
         </Button>
       </Box>
@@ -78,7 +84,7 @@ const MyChats = ({ fetchAgain, setFetchAgain }) => {
           padding: "20px 10px 20px 0",
         }}
       >
-        {loading ? (
+        {fetchChats.loading ? (
           <Box sx={{ width: "80%", margin: "15px auto" }}>
             <Skeleton />
             <Skeleton />

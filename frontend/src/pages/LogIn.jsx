@@ -11,7 +11,7 @@ import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
 import { useForm } from "react-hook-form";
 import { Link, useNavigate } from "react-router-dom";
 import { useEffect } from "react";
-import useAxios from "../helpers/useAxios";
+import useAxios from "../hooks/useAxios";
 import MyAlert from "../components/MyAlert";
 
 const LogIn = () => {

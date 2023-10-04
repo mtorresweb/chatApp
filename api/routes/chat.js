@@ -38,7 +38,7 @@ router.put(
 );
 router.post("/access", check.auth, validateUserId(), chatController.accessChat);
 router.get("/getChats", check.auth, chatController.getChats);
-router.get(
+router.put(
   "/leaveGroup/:groupId",
   check.auth,
   validateLeaveGroup(),

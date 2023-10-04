@@ -12,15 +12,10 @@ import { ChatState } from "../Context/ChatProvider";
 import UserBadgeItem from "./UserBadgeItem";
 import UserListItem from "./UserListItem";
 import VisibilityIcon from "@mui/icons-material/Visibility";
-import {
-  addUserToGroupApi,
-  leaveGroupApi,
-  removeUserFromChatApi,
-  renameGroupApi,
-} from "../api/chatApi";
 import MyAlert from "./MyAlert";
-import { userSearchApi } from "../api/userApi";
 import { socket } from "../socket";
+import useAxios from "../hooks/useAxios";
+import useUserSearch from "../hooks/useUserSearch";
 
 const style = {
   position: "absolute",
@@ -47,13 +42,46 @@ const style = {
 };
 
 const UpdateGroupModal = ({ fetchAgain, setFetchAgain, fetchMessages }) => {
-  const { selectedChat, setSelectedChat, user } = ChatState();
+  const { selectedChat, setSelectedChat, user, setChats } = ChatState();
 
-  const [search, setSearch] = useState("");
+  const leaveChat = useAxios({
+    method: "put",
+    url: `chat/leaveGroup/${selectedChat._id}`,
+    headers: {
+      authorization: "Bearer " + user.token,
+    },
+  });
+
+  const addUserToChat = useAxios({
+    method: "put",
+    url: `chat/addUser`,
+    headers: {
+      authorization: "Bearer " + user.token,
+    },
+  });
+
+  const removeUserFromChat = useAxios({
+    method: "put",
+    url: `chat/removeUser`,
+    headers: {
+      authorization: "Bearer " + user.token,
+    },
+  });
+
+  const renameChat = useAxios({
+    method: "put",
+    url: `chat/renameGroup`,
+    headers: {
+      authorization: "Bearer " + user.token,
+    },
+  });
+
+  const { setSearch, searchResults, loading, setSearchResults } =
+    useUserSearch();
+
   const [groupChatName, setGroupChatName] = useState("");
-  const [searchResults, setSearchResults] = useState([]);
-  const [loading, setLoading] = useState(false);
 
+  //modal
   const [open, setOpen] = useState(false);
   const handleOpen = () => setOpen(true);
   const handleClose = () => {
@@ -69,6 +97,7 @@ const UpdateGroupModal = ({ fetchAgain, setFetchAgain, fetchMessages }) => {
     severity: "info",
   });
 
+  //remove user functionality
   const RemoveUser = async (userToRemove) => {
     if (
       selectedChat.groupAdmin._id !== user._id &&
@@ -82,68 +111,45 @@ const UpdateGroupModal = ({ fetchAgain, setFetchAgain, fetchMessages }) => {
       return;
     }
 
-    const data = await removeUserFromChatApi(userToRemove, selectedChat, user);
+    await removeUserFromChat.fetchData({
+      chatId: selectedChat._id,
+      userId: userToRemove._id,
+    });
     setGroupChatName("");
-
-    if (!data) {
-      setAlert({
-        active: true,
-        message: "Error removing user from chat",
-        severity: "error",
-      });
-      return;
-    }
 
     socket.emit("removed from group", {
       userId: userToRemove._id,
       room: selectedChat._id,
     });
-    setSelectedChat(data);
-    setFetchAgain(!fetchAgain);
-    fetchMessages();
   };
 
+  useEffect(() => {
+    if (removeUserFromChat.response) {
+      setSelectedChat(removeUserFromChat.response);
+      setFetchAgain(!fetchAgain);
+      fetchMessages();
+    }
+  }, [removeUserFromChat.response]);
+
+  //rename group chat functionality
   const handleRename = async () => {
     if (!groupChatName) return;
 
-    const data = await renameGroupApi(groupChatName, selectedChat, user);
-    setGroupChatName("");
-
-    if (!data) {
-      setAlert({
-        active: true,
-        message: "Error updating group chat name",
-        severity: "error",
-      });
-      return;
-    }
-
-    setSelectedChat(data);
-    setFetchAgain(!fetchAgain);
-
-    setAlert({
-      active: true,
-      message: "Chat name updated successfully",
-      severity: "success",
+    await renameChat.fetchData({
+      chatId: selectedChat._id,
+      chatName: groupChatName,
     });
+    setGroupChatName("");
   };
 
-  const handleSearch = async () => {
-    if (!search) return;
-
-    setLoading(true);
-
-    const data = await userSearchApi(search, user);
-
-    if (data.length == 0) {
-      setAlert({ active: true, message: "No users found", severity: "info" });
+  useEffect(() => {
+    if (renameChat.response) {
+      setSelectedChat(renameChat.response);
+      setFetchAgain(!fetchAgain);
     }
+  }, [renameChat.response]);
 
-    setSearchResults(data);
-
-    setLoading(false);
-  };
-
+  //add user to group chat functionality
   const addUser = async (userToAdd) => {
     if (selectedChat.users.find((u) => u._id === userToAdd._id)) {
       setAlert({
@@ -163,44 +169,31 @@ const UpdateGroupModal = ({ fetchAgain, setFetchAgain, fetchMessages }) => {
       return;
     }
 
-    const data = await addUserToGroupApi(userToAdd, selectedChat, user);
-    setGroupChatName("");
-
-    if (!data) {
-      setAlert({
-        active: true,
-        message: "Only administrators can add users",
-        severity: "error",
-      });
-
-      return;
-    }
-
-    setSelectedChat(data);
-    setFetchAgain(!fetchAgain);
-  };
-
-  const leaveGroup = async () => {
-    const data = await leaveGroupApi(selectedChat, user);
-    setGroupChatName("");
-
-    if (!data) {
-      setAlert({
-        active: true,
-        message: "Error leaving group",
-        severity: "error",
-      });
-      return;
-    }
-
-    socket.emit("leave group", selectedChat._id);
-    setSelectedChat();
-    setFetchAgain(!fetchAgain);
+    await addUserToChat.fetchData({
+      chatId: selectedChat._id,
+      userId: userToAdd._id,
+    });
   };
 
   useEffect(() => {
-    handleSearch();
-  }, [search]);
+    if (addUserToChat.response) {
+      setGroupChatName("");
+
+      setSelectedChat(addUserToChat.response);
+      setFetchAgain(!fetchAgain);
+    }
+  }, [addUserToChat.response]);
+
+  //leave group chat functionality
+  const leaveGroup = async () => {
+    await leaveChat.fetchData();
+    setGroupChatName("");
+
+    socket.emit("leave group", selectedChat);
+
+    setSelectedChat({});
+    setChats((chats) => chats.filter((chat) => chat._id !== selectedChat._id));
+  };
 
   return (
     <Box>
@@ -330,18 +323,19 @@ const UpdateGroupModal = ({ fetchAgain, setFetchAgain, fetchMessages }) => {
               Leave group
             </Button>
           </Box>
-          <MyAlert
-            alert={alert}
-            handleClose={() =>
-              setAlert({
-                active: false,
-                message: "",
-                severity: "success",
-              })
-            }
-          />
         </Box>
       </Modal>
+
+      <MyAlert
+        alert={alert}
+        handleClose={() =>
+          setAlert({
+            active: false,
+            message: "",
+            severity: "warning",
+          })
+        }
+      />
     </Box>
   );
 };

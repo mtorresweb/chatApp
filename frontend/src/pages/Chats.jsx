@@ -7,7 +7,7 @@ import { useState } from "react";
 
 const Chats = () => {
   const { user } = ChatState();
-  const [fetchAgain, setFetchAgain] = useState();
+  const [fetchAgain, setFetchAgain] = useState(false);
   return (
     <>
       <SideDrawer />

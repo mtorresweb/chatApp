@@ -8,13 +8,11 @@ const createGroup = async (req, res) => {
   let users = data.users;
   users.push(req.user._id);
 
-  if (users.length < 2) {
-    return res
-      .status(400)
-      .send({
-        success: false,
-        message: "More than 2 users are required to form a group chat",
-      });
+  if (users.length < 3) {
+    return res.status(400).send({
+      success: false,
+      message: "More than 2 users are required to form a group chat",
+    });
   }
 
   const groupChat = await Chat.create({

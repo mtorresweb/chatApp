@@ -11,9 +11,9 @@ import { useEffect, useState } from "react";
 import { ChatState } from "../Context/ChatProvider";
 import UserListItem from "./UserListItem";
 import UserBadgeItem from "./UserBadgeItem";
-import { userSearchApi } from "../api/userApi";
-import { addUsersToChatApi } from "../api/chatApi";
 import MyAlert from "./MyAlert";
+import useAxios from "../hooks/useAxios";
+import useUserSearch from "../hooks/useUserSearch";
 
 const style = {
   position: "absolute",
@@ -41,11 +41,19 @@ const CreateGroupModal = () => {
   const { user, setChats, chats } = ChatState();
 
   // user search
-  const [search, setSearch] = useState("");
+  const { setSearch, searchResults, setSearchResults, loading } =
+    useUserSearch();
+
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [groupChatName, setGroupChatName] = useState("");
-  const [searchResults, setSearchResults] = useState([]);
-  const [loading, setLoading] = useState(false);
+
+  const createGroup = useAxios({
+    method: "post",
+    url: "chat/createGroup",
+    headers: {
+      authorization: "Bearer " + user.token,
+    },
+  });
 
   //modal
   const [open, setOpen] = useState(false);
@@ -58,42 +66,12 @@ const CreateGroupModal = () => {
     setOpen(false);
   };
 
-  //alerts
-  const [alert, setAlert] = useState({
-    active: false,
-    message: "",
-    severity: "success",
-  });
-
   //functions
-  const handleSearch = async () => {
-    if (!search) return;
-
-    setLoading(true);
-
-    let data = await userSearchApi(search, user);
-    setLoading(false);
-
-    if (data.length == 0) {
-      setAlert({
-        active: true,
-        message: "No users found",
-        severity: "warning",
-      });
-    }
-
-    setSearchResults(data);
-  };
 
   const addUser = (userToAdd) => {
     for (let index = 0; index < selectedUsers.length; index++) {
       if (selectedUsers[index]._id == userToAdd._id) {
-        setAlert({
-          active: true,
-          message: "User already selected",
-          severity: "warning",
-        });
-
+        //user already added
         return;
       }
     }
@@ -107,35 +85,18 @@ const CreateGroupModal = () => {
   };
 
   const handleSubmit = async () => {
-    if (selectedUsers.length < 2 || !groupChatName) {
-      setAlert({
-        active: true,
-        message:
-          "Check the fields, more than two users are required to create a group",
-        severity: "warning",
-      });
-
-      return;
-    }
-
-    let data = await addUsersToChatApi(groupChatName, selectedUsers, user);
-
-    if (!data) {
-      setAlert({
-        active: true,
-        message: "Error creating group chat",
-        severity: "error",
-      });
-      return;
-    }
-
-    setChats([data, ...chats]);
-    handleClose();
+    await createGroup.fetchData({
+      name: groupChatName,
+      users: selectedUsers.map((user) => user._id),
+    });
   };
 
   useEffect(() => {
-    handleSearch();
-  }, [search]);
+    if (createGroup.response) {
+      setChats([createGroup.response, ...chats]);
+      handleClose();
+    }
+  }, [createGroup.response]);
 
   return (
     <>
@@ -208,36 +169,36 @@ const CreateGroupModal = () => {
           {/* when searching for a user, shows circular progress while loading; otherwise, it displays a list of matching users. */}
           {loading ? (
             <CircularProgress />
-          ) : /* if there are matching users it shows the list; otherwise, shows nothing */
-          searchResults.length > 0 ? (
-            <Box
-              sx={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                gap: "5px",
-                height: "100px",
-                overflowY: "scroll",
-                overflowX: "hidden",
-                "@media (max-width: 480px)": {
-                  alignItems: "flex-start",
-                },
-                backgroundColor: "#c2bfbf",
-                padding: "10px",
-                borderRadius: "10px",
-                marginBottom: "20px",
-              }}
-            >
-              {searchResults.map((userItem) => (
-                <UserListItem
-                  key={userItem._id}
-                  user={userItem}
-                  handleClick={() => addUser(userItem)}
-                />
-              ))}
-            </Box>
           ) : (
-            <></>
+            /* if there are matching users it shows the list; otherwise, shows nothing */
+            searchResults.length > 0 && (
+              <Box
+                sx={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: "5px",
+                  height: "100px",
+                  overflowY: "scroll",
+                  overflowX: "hidden",
+                  "@media (max-width: 480px)": {
+                    alignItems: "flex-start",
+                  },
+                  backgroundColor: "#c2bfbf",
+                  padding: "10px",
+                  borderRadius: "10px",
+                  marginBottom: "20px",
+                }}
+              >
+                {searchResults.map((userItem) => (
+                  <UserListItem
+                    key={userItem._id}
+                    user={userItem}
+                    handleClick={() => addUser(userItem)}
+                  />
+                ))}
+              </Box>
+            )
           )}
           <Box
             sx={{
@@ -266,18 +227,14 @@ const CreateGroupModal = () => {
               Create
             </Button>
           </Box>
-          <MyAlert
-            alert={alert}
-            handleClose={() =>
-              setAlert({
-                active: false,
-                message: "",
-                severity: "success",
-              })
-            }
-          />
         </Box>
-      </Modal>
+      </Modal>{" "}
+      <MyAlert
+        alert={createGroup.alert}
+        handleClose={() => {
+          createGroup.resetAlert();
+        }}
+      />
     </>
   );
 };

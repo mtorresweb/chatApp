@@ -3,7 +3,11 @@ const validateResults = require("../validationHandler");
 
 const validateCreateGroup = () => [
   body("users", "Provide a valid list of users").exists().isArray(),
-  body("name", "Name is required").exists().trim().escape(),
+  body("name", "Name is required")
+    .exists()
+    .isString()
+    .isLength({ min: 3 })
+    .withMessage("Chat name must be at least 3 characters long"),
   (req, res, next) => validateResults(req, res, next),
 ];
 

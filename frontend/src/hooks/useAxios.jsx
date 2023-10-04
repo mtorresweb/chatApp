@@ -23,7 +23,13 @@ const useAxios = ({ url, method, headers = null }) => {
 
   const fetchData = (body = null) => {
     setloading(true);
-    axios[method](url, body, headers)
+    axios
+      .request({
+        method,
+        url,
+        headers,
+        data: body,
+      })
       .then((res) => {
         setResponse(res.data);
       })

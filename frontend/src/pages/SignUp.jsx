@@ -10,7 +10,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { uploadUserAvatar } from "../api/cloudinaryApi";
 import MyAlert from "../components/MyAlert";
-import useAxios from "../helpers/useAxios";
+import useAxios from "../hooks/useAxios";
 import { useEffect } from "react";
 
 const SignUp = () => {
