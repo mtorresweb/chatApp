@@ -29,7 +29,8 @@ io.on("connection", (socket) => {
     socket.join(room);
   });
 
-  socket.on("leave group", (room) => {
+  socket.on("leave group", (room, user) => {
+    socket.to(room._id).emit("left group", room._id, user);
     socket.leave(room._id);
   });
 
@@ -44,6 +45,12 @@ io.on("connection", (socket) => {
   socket.on("stop typing", (room) => socket.to(room).emit("stop typing"));
 
   socket.on("removed from group", (data) => {
-    socket.to(data.room).emit("removed from group", data.userId);
+    socket.to(data.room).emit("removed from group", data.userId, data.room);
+  });
+
+  socket.on("added to group", (updatedChat, userToAdd) => {
+    socket
+      .to([updatedChat._id, userToAdd._id])
+      .emit("added to group", updatedChat, userToAdd);
   });
 });

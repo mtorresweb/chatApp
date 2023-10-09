@@ -124,10 +124,64 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
     socket.on("typing", () => setIsTyping(true));
     socket.on("stop typing", () => setIsTyping(false));
 
-    socket.on("removed from group", (userId) => {
-      if (userId == loggedUser.current._id) {
-        setChats(currentChats.filter((chat) => chat._id !== currentChat._id));
-        setSelectedChat({});
+    socket.on("removed from group", (userId, room) => {
+      if (userId === loggedUser.current._id) {
+        setChats(currentChats.filter((chat) => chat._id !== room));
+
+        if (currentChat._id === room) {
+          setSelectedChat({});
+        }
+      } else {
+        setChats(
+          currentChats.map((chat) => {
+            return chat._id === room
+              ? { ...chat, users: chat.users.filter((us) => us._id !== userId) }
+              : chat;
+          })
+        );
+
+        if (currentChat._id === room) {
+          setSelectedChat({
+            ...currentChat,
+            users: currentChat.users.filter((us) => us._id !== userId),
+          });
+        }
+      }
+    });
+
+    socket.on("left group", (group, userId) => {
+      setChats(
+        currentChats.map((chat) =>
+          chat._id === group
+            ? { ...chat, users: chat.users.filter((us) => us._id !== userId) }
+            : chat
+        )
+      );
+
+      if (currentChat._id === group) {
+        setSelectedChat({
+          ...currentChat,
+          users: currentChat.users.filter((us) => us._id !== userId),
+        });
+      }
+    });
+
+    socket.on("added to group", (updatedChat, userToAdd) => {
+      if (loggedUser.current._id === userToAdd._id) {
+        setChats([updatedChat, ...currentChats]);
+      } else {
+        setChats(
+          currentChats.map((chat) =>
+            chat._id === updatedChat._id ? updatedChat : chat
+          )
+        );
+
+        if (currentChat._id === updatedChat._id) {
+          setSelectedChat({
+            ...currentChat,
+            users: [...currentChat.users, userToAdd],
+          });
+        }
       }
     });
 
@@ -147,7 +201,7 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
       socket.off("connected");
       socket.off("typing");
       socket.off("stop typing");
-      socket.off("someone left");
+      socket.off("left group");
       socket.off("removed from group");
       socket.off("message received");
     };

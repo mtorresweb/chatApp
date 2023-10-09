@@ -173,6 +173,13 @@ const UpdateGroupModal = ({ fetchAgain, setFetchAgain, fetchMessages }) => {
       chatId: selectedChat._id,
       userId: userToAdd._id,
     });
+
+    const updatedChat = {
+      ...selectedChat,
+      users: [...selectedChat.users, userToAdd],
+    };
+
+    socket.emit("added to group", updatedChat, userToAdd);
   };
 
   useEffect(() => {
@@ -189,7 +196,7 @@ const UpdateGroupModal = ({ fetchAgain, setFetchAgain, fetchMessages }) => {
     await leaveChat.fetchData();
     setGroupChatName("");
 
-    socket.emit("leave group", selectedChat);
+    socket.emit("leave group", selectedChat, user._id);
 
     setSelectedChat({});
     setChats((chats) => chats.filter((chat) => chat._id !== selectedChat._id));
