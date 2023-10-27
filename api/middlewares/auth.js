@@ -2,7 +2,7 @@ const { secretKey } = require(`../helpers/jwt.js`);
 const jwt = require(`jsonwebtoken`);
 
 exports.auth = (req, res, next) => {
-  //check if the user is authenticated
+  //checks if the user is authenticated
   if (
     !req.headers.authorization ||
     !req.headers.authorization.startsWith("Bearer")

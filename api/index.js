@@ -14,6 +14,7 @@ connection();
 const server = app.listen(PORT);
 console.log("app listening on port " + PORT);
 
+//sockets server
 const io = new Server(server, {
   pingTimeout: 60000,
   cors: { origin: "*" },

@@ -3,11 +3,14 @@ const User = require("../models/User");
 const { matchedData } = require("express-validator");
 
 const createGroup = async (req, res) => {
+  //gets validated data
   const data = matchedData(req);
 
+  //adds the current user to the group
   let users = data.users;
   users.push(req.user._id);
 
+  //checks if the group has at least three users
   if (users.length < 3) {
     return res.status(400).send({
       success: false,
@@ -15,6 +18,7 @@ const createGroup = async (req, res) => {
     });
   }
 
+  //creates the new group chat
   const groupChat = await Chat.create({
     chatName: data.name,
     users,
@@ -22,10 +26,12 @@ const createGroup = async (req, res) => {
     groupAdmin: req.user._id,
   });
 
+  //populates users and group admin
   const fullGroupChat = await Chat.findOne({ _id: groupChat._id })
     .populate("users", "-password")
     .populate("groupAdmin", "-password");
 
+  //sends the full chat
   return res.status(200).send(fullGroupChat);
 };
 
