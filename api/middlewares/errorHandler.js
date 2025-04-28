@@ -1,6 +1,5 @@
-const dotenv = require("dotenv");
+
 const { getReasonPhrase } = require("http-status-codes");
-dotenv.config();
 
 const errorHandler = (err, req, res, next) => {
   const statusCode = err.statusCode || 500;

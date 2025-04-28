@@ -2,9 +2,6 @@ const app = require("./app");
 const { Server } = require("socket.io");
 const connection = require("./database/connection.js");
 require("express-async-errors");
-const dotenv = require("dotenv");
-
-dotenv.config();
 
 const PORT = process.env.PORT;
 
