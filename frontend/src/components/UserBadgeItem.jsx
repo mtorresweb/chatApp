@@ -1,7 +1,7 @@
 import { Delete } from "@mui/icons-material";
-import { Button } from "@mui/material";
+import { Button, Typography } from "@mui/material";
 
-const UserBadgeItem = ({ user, handleRemove }) => {
+const UserBadgeItem = ({ user, handleFunction, admin }) => {
   return (
     <Button
       sx={{
@@ -9,9 +9,10 @@ const UserBadgeItem = ({ user, handleRemove }) => {
       }}
       variant="contained"
       endIcon={<Delete />}
-      onClick={() => handleRemove(user)}
+      onClick={() => handleFunction(user)}
     >
       {user.name}
+      {admin && <Typography component="span" sx={{ ml: 1, fontSize: '0.8rem' }}>Admin</Typography>}
     </Button>
   );
 };

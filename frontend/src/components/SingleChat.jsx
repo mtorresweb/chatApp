@@ -10,9 +10,25 @@ import ScrollableChat from "./ScrollableChat";
 import { socket } from "../socket";
 import useAxios from "../hooks/useAxios";
 
+// Variables to track current state for socket events
 let currentChat = {};
 let currentChats = [];
 
+/**
+ * SingleChat component handles the display and functionality of an individual chat conversation
+ * 
+ * This component is responsible for:
+ * - Displaying messages in the selected chat
+ * - Sending new messages
+ * - Handling typing indicators
+ * - Managing real-time updates via Socket.io
+ * - Supporting both one-on-one and group chats
+ * 
+ * @param {Object} props - Component props
+ * @param {boolean} props.fetchAgain - State to trigger chat refresh
+ * @param {Function} props.setFetchAgain - Function to update fetchAgain state
+ * @returns {JSX.Element} SingleChat component
+ */
 const SingleChat = ({ fetchAgain, setFetchAgain }) => {
   const {
     user,
@@ -206,12 +222,12 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
       socket.off("message received");
     };
   }, []);
-
   //every time the selected chat changes, get the new messages and the current chat
   useEffect(() => {
     fetchMessages();
-    currentChat = structuredClone(selectedChat);
-    currentChats = structuredClone(chats);
+    // Use JSON parse/stringify for deep cloning in environments without structuredClone
+    currentChat = JSON.parse(JSON.stringify(selectedChat));
+    currentChats = JSON.parse(JSON.stringify(chats));
   }, [selectedChat, currentChat, chats, currentChats]);
 
   //subscribe to chats
@@ -333,8 +349,8 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
                   padding: "10px",
                   height: "100%",
                 }}
-              >
-                <IconButton
+              >              <IconButton
+                  data-testid="send-button"
                   onClick={(e) => sendMessage(e, true)}
                   sx={{ ":hover": { backgroundColor: "#278ff7" } }}
                 >

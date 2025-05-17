@@ -1,0 +1,31 @@
+{
+  "testEnvironment": "node",
+  "testMatch": ["**/tests/**/*.test.js"],
+  "collectCoverageFrom": [
+    "controllers/**/*.js",
+    "models/**/*.js",
+    "routes/**/*.js",
+    "utils/**/*.js",
+    "helpers/**/*.js",
+    "middlewares/**/*.js",
+    "!**/node_modules/**"
+  ],
+  "coverageDirectory": "./coverage",
+  "coverageThreshold": {
+    "global": {
+      "branches": 70,
+      "functions": 70,
+      "lines": 70,
+      "statements": 70
+    }
+  },
+  "verbose": true,
+  "testTimeout": 30000,
+  "setupFilesAfterEnv": ["./tests/setup.js"],
+  "testPathIgnorePatterns": ["/node_modules/", "/dist/"],
+  "watchPathIgnorePatterns": ["/node_modules/", "/dist/"],
+  "clearMocks": true,
+  "restoreMocks": true,
+  "resetMocks": false,
+  "testSequencer": "./tests/sequencer.js"
+}
