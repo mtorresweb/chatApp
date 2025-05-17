@@ -11,18 +11,26 @@ import { useForm } from "react-hook-form";
 import { uploadUserAvatar } from "../api/cloudinaryApi";
 import MyAlert from "../components/MyAlert";
 import useAxios from "../hooks/useAxios";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 const SignUp = () => {
   const navigate = useNavigate();
+  const [isUploading, setIsUploading] = useState(false);
+  const [selectedImage, setSelectedImage] = useState(null);
   const createUser = useAxios({
     method: "post",
     url: "user/register",
   });
 
   const send = async (userData) => {
-    await uploadUserAvatar(userData);
-    await createUser.fetchData(userData);
+    try {
+      setIsUploading(true);
+      await uploadUserAvatar(userData);
+      setIsUploading(false);
+      await createUser.fetchData(userData);
+    } catch (error) {
+      setIsUploading(false);
+    }
   };
 
   useEffect(() => {
@@ -33,6 +41,16 @@ const SignUp = () => {
   }, [createUser]);
 
   const { register, handleSubmit } = useForm();
+  
+  // Combined loading state that checks both upload and registration
+  const isLoading = isUploading || createUser.loading;
+  
+  // Handle image selection
+  const handleImageChange = (e) => {
+    if (e.target.files && e.target.files[0]) {
+      setSelectedImage(e.target.files[0].name);
+    }
+  };
 
   return (
     <Container maxWidth="sm">
@@ -82,17 +100,34 @@ const SignUp = () => {
             id="password"
             autoComplete="current-password"
           />
-          <Button variant="contained" component="label" sx={{ mt: 3, mb: 2 }}>
-            Upload Image
-            <input type="file" hidden name="pic" {...register("pic")} />
-          </Button>
+          <Box sx={{ display: 'flex', alignItems: 'center', mt: 3, mb: 2 }}>
+            <Button variant="contained" component="label">
+              Upload Image
+              <input 
+                type="file" 
+                hidden 
+                name="pic" 
+                {...register("pic")} 
+                onChange={handleImageChange}
+              />
+            </Button>
+            {selectedImage && (
+              <Typography 
+                variant="body2" 
+                sx={{ ml: 2, color: 'text.secondary', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis' }}
+              >
+                {selectedImage}
+              </Typography>
+            )}
+          </Box>
           <Button
             type="submit"
             fullWidth
             variant="contained"
             sx={{ mt: 3, mb: 2 }}
+            disabled={isLoading}
           >
-            {createUser.loading ? "Loading..." : "Sign Up"}
+            {isLoading ? "Loading..." : "Sign Up"}
           </Button>
           <Grid container>
             <Grid item xs>

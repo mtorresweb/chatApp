@@ -1,9 +1,25 @@
-const app = require("./app");
+const app = require("./app.js");
 const { Server } = require("socket.io");
 const connection = require("./database/connection.js");
 require("express-async-errors");
 
-const PORT = process.env.PORT;
+process
+  .on("SIGTERM", shutdown("SIGTERM"))
+  .on("SIGINT", shutdown("SIGINT"))
+  .on("uncaughtException", shutdown("uncaughtException"));
+
+function shutdown(signal) {
+  return (err) => {
+    console.log(`${signal}...`);
+    if (err) console.error(err.stack || err);
+    setTimeout(() => {
+      console.log("...waited 5s, exiting.");
+      process.exit(err ? 1 : 0);
+    }, 5000).unref();
+  };
+}
+
+const PORT = process.env.PORT || 3000;
 
 //Connection to database
 connection();
@@ -18,6 +34,11 @@ const io = new Server(server, {
 });
 
 io.on("connection", (socket) => {
+  // Add error handling for socket.io
+  io.engine.on("connection_error", (err) => {
+    console.log("Socket.io connection error:", err);
+  });
+
   socket.on("setup", (userData) => {
     socket.join(userData._id);
     socket.emit("connected");
@@ -50,5 +71,10 @@ io.on("connection", (socket) => {
     socket
       .to([updatedChat._id, userToAdd._id])
       .emit("added to group", updatedChat, userToAdd);
+  });
+
+  // Handle disconnection
+  socket.on("disconnect", (reason) => {
+    console.log(`Socket ${socket.id} disconnected due to ${reason}`);
   });
 });
